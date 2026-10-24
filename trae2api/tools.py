@@ -83,7 +83,10 @@ class ToolExecutor:
 
     def list_dir(self, **kw) -> str:
         path = kw.get("dir_path") or kw.get("path") or kw.get("directory") or "."
-        p = self._resolve(path)
+        try:
+            p = self._resolve(path)
+        except PermissionError as e:
+            return f"[blocked] {e}"
         if not p.exists():
             return f"[error] path not found: {p}"
         if p.is_file():
@@ -98,7 +101,10 @@ class ToolExecutor:
         path = kw.get("file_path") or kw.get("path") or kw.get("filePath") or kw.get("file")
         if not path:
             return "[error] missing file path"
-        p = self._resolve(path)
+        try:
+            p = self._resolve(path)
+        except PermissionError as e:
+            return f"[blocked] {e}"
         if not p.is_file():
             return f"[error] not a file: {p}"
         try:
@@ -120,7 +126,11 @@ class ToolExecutor:
         pattern = kw.get("pattern") or kw.get("regex") or kw.get("query")
         if not pattern:
             return "[error] missing pattern"
-        root = self._resolve(kw.get("dir_path") or kw.get("path") or ".")
+        root_raw = kw.get("dir_path") or kw.get("path") or "."
+        try:
+            root = self._resolve(root_raw)
+        except PermissionError as e:
+            return f"[blocked] {e}"
         try:
             rx = re.compile(pattern)
         except re.error as e:

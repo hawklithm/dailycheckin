@@ -130,6 +130,107 @@ def _parse_sse_lines(text: str):
     yield from SSEAssembler().feed(text)
 
 
+async def _bridge_events(model: str, messages: list[dict], client_tools: list[dict],
+                        known_names: set, tool_choice=None) -> AsyncIterator[bytes]:
+    """Agent loop: run gateway turns, executing gateway-internal tools locally.
+
+    A call whose name the client declared is emitted as an OpenAI tool_call
+    (the client executes it). A call the client does NOT know is executed by
+    trae2api itself and its result is fed back as the verified
+    "工具执行结果：..." user message, looping until the model finishes.
+    """
+    from .translate import ToolCallTranslator
+    from .tools import ToolExecutor
+
+    executor = ToolExecutor()
+    chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
+    created = int(time.time())
+    cur_messages = list(messages)
+    max_rounds = int(os.environ.get("TRAE2API_MAX_TOOL_ROUNDS", "8"))
+
+    def emit(chunk: dict) -> bytes:
+        return f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n".encode()
+
+    def base(delta: dict, finish: str | None = None) -> dict:
+        return {"id": chat_id, "object": "chat.completion.chunk", "created": created,
+                "model": model, "choices": [{"index": 0, "delta": delta,
+                                             "finish_reason": finish}]}
+
+    for _ in range(max_rounds):
+        assembler = SSEAssembler()
+        translator = ToolCallTranslator()
+        calls: list[dict] = []
+        usage: dict = {}
+        async for raw in gateway.stream_chat(model=model, messages=cur_messages,
+                                             tools=client_tools or None,
+                                             tool_choice=tool_choice):
+            for event, data in assembler.feed(raw.decode("utf-8", "replace")
+                                              if isinstance(raw, bytes) else raw):
+                if not isinstance(data, dict):
+                    continue
+                if event == "output":
+                    if data.get("reasoning_content"):
+                        yield emit(base({"reasoning_content": data["reasoning_content"]}))
+                    content = data.get("response") or ""
+                    if content:
+                        plain, new_calls = translator.feed(content)
+                        if plain:
+                            yield emit(base({"content": plain}))
+                        calls.extend(new_calls)
+                elif event == "token_usage":
+                    usage = {"prompt_tokens": data.get("prompt_tokens", 0),
+                             "completion_tokens": data.get("completion_tokens", 0),
+                             "total_tokens": data.get("total_tokens", 0)}
+                elif event == "error":
+                    yield emit(base({"content": "\n[trae2api error "
+                                               f"{data.get('code', '?')}: {data.get('message', '')}]"}))
+                    yield emit(base({}, "stop")) + b"data: [DONE]\n\n"
+                    return
+        residual, more = translator.finish()
+        if residual:
+            yield emit(base({"content": residual}))
+        calls.extend(more)
+
+        client_calls = [c for c in calls if c.get("function", {}).get("name") in known_names]
+        internal = [c for c in calls if c.get("function", {}).get("name") not in known_names]
+
+        if client_calls:
+            for i, tc in enumerate(client_calls):
+                tc["index"] = i
+                yield emit(base({"tool_calls": [tc]}))
+            yield emit(base({}, "tool_calls")) + b"data: [DONE]\n\n"
+            return
+        if not internal:
+            if usage:
+                yield emit({"id": chat_id, "object": "chat.completion.chunk",
+                            "created": created, "model": model, "choices": [],
+                            "usage": usage})
+            yield emit(base({}, "stop")) + b"data: [DONE]\n\n"
+            return
+
+        # execute the gateway's tools locally, then continue the loop
+        names = ", ".join(tc["function"]["name"] for tc in internal)
+        yield emit(base({"content": f"\n[trae2api] 执行工具: {names}\n"}))
+        results = []
+        for tc in internal:
+            name = tc["function"]["name"]
+            args = tc["function"].get("arguments") or "{}"
+            out = executor.run(name, args)
+            results.append(f"[{name}]\n{out if out is not None else '[unsupported tool]'}")
+        cur_messages = cur_messages + [
+            {"role": "assistant", "content": "",
+             "tool_calls": [{**tc, "id": tc.get("id") or f"call_{uuid.uuid4().hex[:24]}"}
+                            for tc in internal]},
+            {"role": "user", "content": "工具执行结果：\n" + "\n".join(results)},
+        ]
+    yield emit(base({"content": "\n[trae2api] 达到最大工具轮次，停止。"}))
+    yield emit(base({}, "stop")) + b"data: [DONE]\n\n"
+
+
+def tools_enabled() -> bool:
+    return os.environ.get("TRAE2API_EXEC_TOOLS") == "1"
+
+
 async def _safe_sse(gen, model: str) -> AsyncIterator[bytes]:
     """Wrap gateway SSE so exceptions become SSE error events, not HTTP 500s."""
     try:
@@ -276,52 +377,90 @@ async def chat_completions(request: Request):
         return [c for c in calls if c.get("function", {}).get("name") in known_names]
 
     assert gateway is not None
+    exec_tools = tools_enabled()
     if stream:
-        gen = gateway.stream_chat(model=model, messages=messages,
-                                  tools=client_tools or None,
-                                  tool_choice=body.get("tool_choice"))
+        if exec_tools:
+            gen = _bridge_events(model, messages, client_tools, known_names,
+                                 tool_choice=body.get("tool_choice"))
+        else:
+            gen = _translate_events(
+                gateway.stream_chat(model=model, messages=messages,
+                                    tools=client_tools or None,
+                                    tool_choice=body.get("tool_choice")),
+                model, tool_filter=_filter_calls)
         return StreamingResponse(
-            _safe_sse(_translate_events(gen, model, tool_filter=_filter_calls), model),
+            _safe_sse(gen, model),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
-    # non-stream: buffer the SSE then return a complete OpenAI response
+    # non-stream: buffer the SSE (with local tool execution) then return one response
     from .translate import ToolCallTranslator
     translator = ToolCallTranslator()
     assembler = SSEAssembler()
+    exec_tools = tools_enabled()
+    cur_messages = list(messages)
+    max_rounds = int(os.environ.get("TRAE2API_MAX_TOOL_ROUNDS", "8")) if exec_tools else 1
     try:
-        content_parts: list[str] = []
-        reasoning_parts: list[str] = []
-        tool_calls: list[dict] = []
-        usage: dict = {}
-        async for raw in gateway.stream_chat(model=model, messages=messages,
-                                             tools=client_tools or None,
-                                             tool_choice=body.get("tool_choice")):
-            text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
-            for event, data in assembler.feed(text):
-                if not isinstance(data, dict):
-                    continue
-                if event == "output":
-                    if data.get("reasoning_content"):
-                        reasoning_parts.append(data["reasoning_content"])
-                    content = data.get("response") or ""
-                    if content:
-                        plain, calls = translator.feed(content)
-                        if plain:
-                            content_parts.append(plain)
-                        tool_calls.extend(calls)
-                elif event == "token_usage":
-                    usage = {
-                        "prompt_tokens": data.get("prompt_tokens", 0),
-                        "completion_tokens": data.get("completion_tokens", 0),
-                        "total_tokens": data.get("total_tokens", 0),
-                    }
-                elif event == "error":
-                    raise GatewayError(data.get("code", "unknown"), data.get("message", "gateway error"))
-        residual, more_calls = translator.finish()
-        if residual:
-            content_parts.append(residual)
-        tool_calls.extend(more_calls)
+        for _ in range(max_rounds):
+            content_parts: list[str] = []
+            reasoning_parts: list[str] = []
+            tool_calls: list[dict] = []
+            usage: dict = {}
+            async for raw in gateway.stream_chat(model=model, messages=cur_messages,
+                                                 tools=client_tools or None,
+                                                 tool_choice=body.get("tool_choice")):
+                text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
+                for event, data in assembler.feed(text):
+                    if not isinstance(data, dict):
+                        continue
+                    if event == "output":
+                        if data.get("reasoning_content"):
+                            reasoning_parts.append(data["reasoning_content"])
+                        content = data.get("response") or ""
+                        if content:
+                            plain, calls = translator.feed(content)
+                            if plain:
+                                content_parts.append(plain)
+                            tool_calls.extend(calls)
+                    elif event == "token_usage":
+                        usage = {
+                            "prompt_tokens": data.get("prompt_tokens", 0),
+                            "completion_tokens": data.get("completion_tokens", 0),
+                            "total_tokens": data.get("total_tokens", 0),
+                        }
+                    elif event == "error":
+                        raise GatewayError(data.get("code", "unknown"),
+                                           data.get("message", "gateway error"))
+            residual, more_calls = translator.finish()
+            if residual:
+                content_parts.append(residual)
+            tool_calls.extend(more_calls)
+            break_loop = True
+            if exec_tools:
+                internal = [c for c in tool_calls
+                            if c.get("function", {}).get("name") not in known_names]
+                client_calls = [c for c in tool_calls
+                                if c.get("function", {}).get("name") in known_names]
+                if internal and not client_calls:
+                    from .tools import ToolExecutor
+                    executor = ToolExecutor()
+                    results = []
+                    for tc in internal:
+                        out = executor.run(tc["function"]["name"],
+                                           tc["function"].get("arguments") or "{}")
+                        results.append(f"[{tc['function']['name']}]\n"
+                                       f"{out if out is not None else '[unsupported tool]'}")
+                    cur_messages = cur_messages + [
+                        {"role": "assistant", "content": "", "tool_calls": internal},
+                        {"role": "user", "content": "工具执行结果：\n" + "\n".join(results)},
+                    ]
+                    # keep looping; discard intermediate prose of tool turns
+                    content_parts, reasoning_parts, tool_calls = [], [], []
+                    break_loop = False
+            if break_loop:
+                break
+        else:
+            content_parts.append("\n[trae2api] 达到最大工具轮次，停止。")
     except GatewayError as e:
         return JSONResponse(status_code=502, content=_error_event(e.code, e.message))
     except Exception as e:  # noqa: BLE001
