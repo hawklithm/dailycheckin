@@ -2,6 +2,8 @@
 import json
 import os
 import sys
+import tempfile
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -52,6 +54,45 @@ out = e.run("list_dir", json.dumps({"path": "."}))
 check("run() dispatch", out and "README.md" in out, str(out)[:60])
 out = e.run("list_dir", "not-json")
 check("run() bad args survives", isinstance(out, str), str(out)[:60])
+
+print("== write / edit / delete ==")
+import tempfile  # noqa: E402
+
+tmp = Path(tempfile.mkdtemp())
+w = ToolExecutor(workspace=str(tmp))
+out = w.write_to_file(file_path="a/b.txt", content="hello world")
+check("write_to_file creates dirs", out.startswith("[ok]"), out)
+check("file exists", (tmp / "a" / "b.txt").is_file() and
+      (tmp / "a" / "b.txt").read_text(encoding="utf-8") == "hello world")
+out = w.edit_search_replace(file_path="a/b.txt", old_str="hello", new_str="hi")
+check("replace ok", out.startswith("[ok]"), out)
+check("content replaced", (tmp / "a" / "b.txt").read_text(encoding="utf-8") == "hi world")
+out = w.edit_search_replace(file_path="a/b.txt", old_str="nope", new_str="x")
+check("missing old_str handled", out.startswith("[error]"), out)
+out = w.write_to_file(path="../escape.txt", content="x")
+check("write outside blocked", out.startswith("[blocked]"), out)
+out = w.delete_file(file_path="a/b.txt")
+check("delete blocked by default", out.startswith("[blocked]"), out)
+os.environ["TRAE2API_ALLOW_DELETE"] = "1"
+w2 = ToolExecutor(workspace=str(tmp))
+out = w2.delete_file(file_path="a/b.txt")
+check("delete when allowed", out.startswith("[ok]"), out)
+os.environ.pop("TRAE2API_ALLOW_DELETE", None)
+
+print("== read-only mode ==")
+os.environ["TRAE2API_READ_ONLY"] = "1"
+r = ToolExecutor(workspace=str(tmp))
+check("write blocked in read-only", r.write_to_file(file_path="x.txt", content="y")
+      .startswith("[blocked]"))
+check("edit blocked in read-only", r.edit_search_replace(file_path="x.txt", old_str="a",
+                                                         new_str="b").startswith("[blocked]"))
+check("read still works", r.list_dir(path=".").startswith(str(tmp)))
+os.environ.pop("TRAE2API_READ_ONLY", None)
+
+print("== todo_write ==")
+out = e.todo_write(todos=[{"content": "step one", "status": "in_progress"}])
+check("todo recorded", "[ok]" in out and "step one" in out, out)
+check("todo state kept", len(e._todos) == 1)
 
 print("== opt-in flag ==")
 os.environ.pop("TRAE2API_EXEC_TOOLS", None)

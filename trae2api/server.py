@@ -215,8 +215,22 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
         for tc in internal:
             name = tc["function"]["name"]
             args = tc["function"].get("arguments") or "{}"
-            out = executor.run(name, args)
-            results.append(f"[{name}]\n{out if out is not None else '[unsupported tool]'}")
+            out: str | None = None
+            if name in ("web_search", "websearch", "search_web"):
+                try:
+                    kw = json.loads(args) if args else {}
+                    if not isinstance(kw, dict):
+                        kw = {"query": str(kw)}
+                    query = (kw.get("query") or kw.get("user_input")
+                             or kw.get("q") or kw.get("search_term") or "")
+                    out = await gateway.web_search(str(query)) if query else "[error] empty query"
+                except Exception as e:  # noqa: BLE001
+                    out = f"[error] web_search failed: {e}"
+            else:
+                out = executor.run(name, args)
+                if out is None:
+                    out = "[unsupported tool] 该工具未被代理实现，将交回客户端处理"
+            results.append(f"[{name}]\n{out}")
         cur_messages = cur_messages + [
             {"role": "assistant", "content": "",
              "tool_calls": [{**tc, "id": tc.get("id") or f"call_{uuid.uuid4().hex[:24]}"}
@@ -446,10 +460,25 @@ async def chat_completions(request: Request):
                     executor = ToolExecutor()
                     results = []
                     for tc in internal:
-                        out = executor.run(tc["function"]["name"],
-                                           tc["function"].get("arguments") or "{}")
-                        results.append(f"[{tc['function']['name']}]\n"
-                                       f"{out if out is not None else '[unsupported tool]'}")
+                        name = tc["function"]["name"]
+                        args = tc["function"].get("arguments") or "{}"
+                        out: str | None = None
+                        if name in ("web_search", "websearch", "search_web"):
+                            try:
+                                kw = json.loads(args) if args else {}
+                                if not isinstance(kw, dict):
+                                    kw = {"query": str(kw)}
+                                query = (kw.get("query") or kw.get("user_input")
+                                         or kw.get("q") or kw.get("search_term") or "")
+                                out = (await gateway.web_search(str(query))
+                                       if query else "[error] empty query")
+                            except Exception as e:  # noqa: BLE001
+                                out = f"[error] web_search failed: {e}"
+                        else:
+                            out = executor.run(name, args)
+                            if out is None:
+                                out = "[unsupported tool] 该工具未被代理实现"
+                        results.append(f"[{name}]\n{out}")
                     cur_messages = cur_messages + [
                         {"role": "assistant", "content": "", "tool_calls": internal},
                         {"role": "user", "content": "工具执行结果：\n" + "\n".join(results)},

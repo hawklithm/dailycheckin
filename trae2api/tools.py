@@ -49,17 +49,41 @@ class ToolExecutor:
                               or DEFAULT_WORKSPACE).resolve()
         self.timeout = float(os.environ.get("TRAE2API_EXEC_TIMEOUT", timeout))
         self.allow_shell = allow_shell and os.environ.get("TRAE2API_EXEC_SHELL", "1") == "1"
+        # write/delete are gated separately from read-only tools
+        self.read_only = os.environ.get("TRAE2API_READ_ONLY") == "1"
+        self.allow_delete = (not self.read_only) and os.environ.get("TRAE2API_ALLOW_DELETE") == "1"
+        self._todos: list[dict] = []
         self.registry = {
+            # --- read ---
             "list_dir": self.list_dir,
             "view_folder": self.list_dir,
             "ls": self.list_dir,
             "view_file": self.read_file,
             "view_files": self.read_file,
             "read_file": self.read_file,
+            "read": self.read_file,
+            "cat": self.read_file,
+            "head": self.read_file,
+            # --- search ---
             "search_by_regex": self.search_by_regex,
-            "grep_search": self.search_by_regex,
+            "grep": self.search_by_regex,
+            "search_codebase": self.search_by_regex,
+            # --- shell ---
             "run_shell_command": self.run_command,
+            "run_shell_cmd": self.run_command,
             "run_command": self.run_command,
+            "shell_tool": self.run_command,
+            # --- write / edit ---
+            "write_to_file": self.write_to_file,
+            "write_file": self.write_to_file,
+            "create_file": self.write_to_file,
+            "write": self.write_to_file,
+            "edit_file_search_replace": self.edit_search_replace,
+            "edit_file_update": self.edit_search_replace,
+            "multi_edit": self.edit_search_replace,
+            "edit": self.edit_search_replace,
+            "delete_file": self.delete_file,
+            "todo_write": self.todo_write,
         }
 
     # ---------- helpers ----------
@@ -168,6 +192,88 @@ class ToolExecutor:
             return f"[error] {e}"
         out = (p.stdout or b"").decode("utf-8", "replace") + (p.stderr or b"").decode("utf-8", "replace")
         return self._truncate(f"[exit {p.returncode}]\n{out}")
+
+    # ---------- write / edit / delete ----------
+
+    def write_to_file(self, **kw) -> str:
+        if self.read_only:
+            return "[blocked] write disabled (TRAE2API_READ_ONLY=1)"
+        path = kw.get("file_path") or kw.get("path") or kw.get("target_file")
+        content = kw.get("content", kw.get("new_content", kw.get("new_str")))
+        if not path:
+            return "[error] missing file path"
+        if content is None:
+            return "[error] missing content"
+        try:
+            p = self._resolve(path)
+        except PermissionError as e:
+            return f"[blocked] {e}"
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(str(content), encoding="utf-8")
+        except Exception as e:
+            return f"[error] write failed: {e}"
+        return f"[ok] wrote {p} ({len(str(content))} chars)"
+
+    def edit_search_replace(self, **kw) -> str:
+        if self.read_only:
+            return "[blocked] edit disabled (TRAE2API_READ_ONLY=1)"
+        path = kw.get("file_path") or kw.get("path") or kw.get("target_file")
+        old = kw.get("old_str", kw.get("old_string"))
+        new = kw.get("new_str", kw.get("new_string", kw.get("new_content")))
+        if not path or old is None or new is None:
+            return "[error] need file_path, old_str and new_str"
+        try:
+            p = self._resolve(path)
+        except PermissionError as e:
+            return f"[blocked] {e}"
+        if not p.is_file():
+            return f"[error] not a file: {p}"
+        try:
+            text = p.read_text(encoding="utf-8")
+        except Exception as e:
+            return f"[error] read failed: {e}"
+        count = text.count(old)
+        if count == 0:
+            return f"[error] old_str not found in {p}"
+        if count > 1:
+            return f"[error] old_str occurs {count} times; must be unique"
+        p.write_text(text.replace(old, new, 1), encoding="utf-8")
+        return f"[ok] replaced 1 occurrence in {p}"
+
+    def delete_file(self, **kw) -> str:
+        if not self.allow_delete:
+            return "[blocked] delete disabled (set TRAE2API_ALLOW_DELETE=1 to allow)"
+        path = kw.get("file_path") or kw.get("path") or kw.get("target_file")
+        if not path:
+            return "[error] missing file path"
+        try:
+            p = self._resolve(path)
+        except PermissionError as e:
+            return f"[blocked] {e}"
+        if not p.exists():
+            return f"[error] not found: {p}"
+        try:
+            p.unlink()
+        except Exception as e:
+            return f"[error] delete failed: {e}"
+        return f"[ok] deleted {p}"
+
+    def todo_write(self, **kw) -> str:
+        """Plan tracking lives in the proxy; we keep it in memory and echo it."""
+        items = kw.get("todos") or kw.get("items") or []
+        if isinstance(items, str):
+            items = [{"content": items}]
+        if isinstance(items, dict):
+            items = [items]
+        self._todos = [i for i in items if isinstance(i, dict)]
+        if not self._todos:
+            return "[ok] todo list cleared"
+        lines = []
+        for i, t in enumerate(self._todos, 1):
+            status = str(t.get("status", "pending"))
+            lines.append(f"{i}. [{status}] {t.get('content', '')}")
+        return "[ok] todo list:\n" + "\n".join(lines)
 
     # ---------- dispatch ----------
 

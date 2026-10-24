@@ -55,6 +55,9 @@ class ImpersonatedGateway:
             self._session = AsyncSession(impersonate=self.impersonate)
         return self._session
 
+    async def web_search(self, query: str, session_id: str = "", top_k: int = 5) -> str:
+        return await self._inner.web_search(query, session_id=session_id, top_k=top_k)
+
     async def ping(self) -> dict:
         s = self._get_session()
         r = await s.post(f"{self.base}/api/ide/v1/ping", json={}, headers=self._headers())

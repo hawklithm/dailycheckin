@@ -190,6 +190,53 @@ class TraeGateway:
             body["model_name"] = model.strip()
         return body
 
+    async def web_search(self, query: str, session_id: str = "", top_k: int = 5) -> str:
+        """POST /api/ide/v1/web_search — same call the IDE's own client makes."""
+        body = {
+            "user_input": query,
+            "top_k": top_k,
+            "session_id": session_id or str(uuid.uuid4()),
+            "language": "zh-CN",
+        }
+        r = await self.client.post(f"{self.base}/api/ide/v1/web_search", json=body,
+                                   headers=self._headers(), timeout=60.0)
+        if r.status_code != 200:
+            return f"[error] web_search HTTP {r.status_code}: {r.text[:200]}"
+        try:
+            data = r.json()
+        except Exception:
+            return f"[error] web_search bad json: {r.text[:200]}"
+        result = data.get("Result") or data.get("result") or data
+        if isinstance(result, dict):
+            # observed shape: {"references": [{"title","uri","snippets":[...],"source"}]}
+            refs = result.get("references") or result.get("documents") or []
+            if isinstance(refs, list) and refs:
+                lines = []
+                for it in refs[:top_k]:
+                    if not isinstance(it, dict):
+                        continue
+                    title = it.get("title") or ""
+                    url = it.get("uri") or it.get("url") or ""
+                    snips = it.get("snippets") or []
+                    snippet = " ".join(str(s) for s in snips)[:400] if isinstance(snips, list) else str(snips)[:400]
+                    lines.append(f"- {title}\n  {url}\n  {snippet}")
+                if lines:
+                    return "\n".join(lines)
+            items = result.get("results") or result.get("items") or []
+            if isinstance(items, list) and items:
+                lines = []
+                for it in items[:top_k]:
+                    if isinstance(it, dict):
+                        title = it.get("title") or it.get("name") or ""
+                        url = it.get("url") or it.get("link") or ""
+                        snippet = (it.get("snippet") or it.get("summary")
+                                   or it.get("content") or "")
+                        lines.append(f"- {title}\n  {url}\n  {str(snippet)[:300]}")
+                if lines:
+                    return "\n".join(lines)
+        import json as _json
+        return _json.dumps(result, ensure_ascii=False)[:4000]
+
     async def stream_chat(self, model: str, messages: list[dict], session_id: str | None = None,
                           tools: list[dict] | None = None, tool_choice=None) -> AsyncIterator[bytes]:
         """Yield raw SSE byte chunks from POST /api/ide/v1/chat."""
