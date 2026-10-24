@@ -1,0 +1,22 @@
+# secrets & credentials
+trae2api/trae2api.json
+*.token
+*.secret
+
+# trace logs contain conversation content
+trae2api/trace/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# notes: reverse-engineering evidence (local only; contains machine fingerprints)
+# notes/ is tracked intentionally EXCEPT decrypted credential material
+notes/state-copy.vscdb
+notes/state-backup-copy.vscdb
+notes/aiagent-db/
+notes/server-err.log
+notes/_*
