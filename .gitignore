@@ -20,3 +20,19 @@ notes/state-backup-copy.vscdb
 notes/aiagent-db/
 notes/server-err.log
 notes/_*
+# scratch: subagent decoding scripts / temp output
+notes/s*.py
+notes/d*.py
+notes/dec*.py
+notes/grepbig.py
+notes/strsearch.py
+notes/extract_arr.py
+notes/win.py
+notes/dump.py
+notes/d1.txt
+notes/dec*.js
+notes/jsfollowup.md
+# large decoded bundles + downloaded VSIX
+notes/aiServer_decoded.js
+notes/strings_aiServer.json
+notes/marscode-ext/
