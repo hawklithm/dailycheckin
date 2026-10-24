@@ -99,7 +99,59 @@ class TraeGateway:
         return r.json()
 
     @staticmethod
-    def build_chat_body(model: str, messages: list[dict], session_id: str | None = None) -> dict:
+    def render_tool_declarations(tools: list[dict], tool_choice=None) -> str:
+        """Render OpenAI tool definitions as an in-prompt tool section.
+
+        The gateway injects its own IDE toolset (ide_prompts); without this
+        section the model calls Trae-internal tools (list_dir, ...) that the
+        client cannot execute. Declaring the client's tools in the prompt
+        steers the model to emit calls the client actually knows.
+        tool_choice mirrors OpenAI semantics: "auto"/"none"/"required" or
+        {"type":"function","function":{"name":...}}.
+        """
+        if not tools:
+            return ""
+        lines = [
+            "【可用工具】",
+            "你可以使用以下工具。调用时必须严格使用如下格式（一行内完成）：",
+            '<|FunctionCallBegin|>[{"name":"工具名","parameters":{参数对象}}]<|FunctionCallEnd|>',
+            "工具执行结果会以用户消息「工具执行结果：…」回传，收到后再继续回答。",
+            "",
+        ]
+        for t in tools:
+            if t.get("type") != "function":
+                continue
+            fn = t.get("function") or {}
+            name = fn.get("name") or ""
+            if not name:
+                continue
+            desc = (fn.get("description") or "").strip()
+            params = fn.get("parameters")
+            lines.append(f"- name: {name}")
+            if desc:
+                lines.append(f"  说明: {desc}")
+            if params:
+                try:
+                    lines.append(f"  参数schema: {json.dumps(params, ensure_ascii=False)}")
+                except (TypeError, ValueError):
+                    pass
+        lines.append("")
+        lines.append("除上述工具外，不要调用任何其他工具。")
+        if tool_choice is not None:
+            if tool_choice == "none":
+                lines.append("本轮禁止调用任何工具，直接用文字回答。")
+            elif tool_choice == "required":
+                lines.append("本轮必须调用上述某一个工具。")
+            elif isinstance(tool_choice, dict):
+                name = ((tool_choice.get("function") or {}).get("name")
+                        or tool_choice.get("name") or "")
+                if name:
+                    lines.append(f"本轮必须调用工具 {name}。")
+        return "\n".join(lines)
+
+    @staticmethod
+    def build_chat_body(model: str, messages: list[dict], session_id: str | None = None,
+                        tools: list[dict] | None = None, tool_choice=None) -> dict:
         """Translate OpenAI-style messages into the gateway /chat body.
 
         Uses translate.normalize_messages so that:
@@ -112,6 +164,10 @@ class TraeGateway:
 
         session_id = session_id or str(uuid.uuid4())
         turns = normalize_messages(messages)
+        if tools:
+            rendered = TraeGateway.render_tool_declarations(tools, tool_choice)
+            if rendered:
+                turns = [("system", rendered)] + turns
         user_text, chat_history = trae_history_and_input(turns)
         chat_history = chat_history[-24:]
         body = {
@@ -119,6 +175,8 @@ class TraeGateway:
             "session_id": session_id,
             "chat_history": chat_history,
         }
+        if tools:
+            body["intent_name"] = "chat"
         # The gateway rejects unknown model_name values (4023). The IDE's own
         # model routing happens native-side; the server default is used when
         # model_name is omitted. TRAE2API_MODEL overrides everything; the
@@ -132,9 +190,10 @@ class TraeGateway:
             body["model_name"] = model.strip()
         return body
 
-    async def stream_chat(self, model: str, messages: list[dict], session_id: str | None = None) -> AsyncIterator[bytes]:
+    async def stream_chat(self, model: str, messages: list[dict], session_id: str | None = None,
+                          tools: list[dict] | None = None, tool_choice=None) -> AsyncIterator[bytes]:
         """Yield raw SSE byte chunks from POST /api/ide/v1/chat."""
-        body = self.build_chat_body(model, messages, session_id)
+        body = self.build_chat_body(model, messages, session_id, tools=tools, tool_choice=tool_choice)
         self._trace("request", {"url": f"{self.base}/api/ide/v1/chat", "body": body})
         async with self.client.stream(
             "POST", f"{self.base}/api/ide/v1/chat", json=body, headers=self._headers()

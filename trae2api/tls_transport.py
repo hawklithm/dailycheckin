@@ -45,8 +45,9 @@ class ImpersonatedGateway:
     def _headers(self) -> dict:
         return self._inner._headers()
 
-    def build_chat_body(self, model: str, messages: list[dict], session_id: str | None = None) -> dict:
-        return self._inner.build_chat_body(model, messages, session_id)
+    def build_chat_body(self, model: str, messages: list[dict], session_id: str | None = None,
+                        tools: list[dict] | None = None, tool_choice=None) -> dict:
+        return self._inner.build_chat_body(model, messages, session_id, tools=tools, tool_choice=tool_choice)
 
     def _get_session(self):
         if self._session is None:
@@ -60,8 +61,9 @@ class ImpersonatedGateway:
         r.raise_for_status()
         return r.json()
 
-    async def stream_chat(self, model: str, messages: list[dict], session_id: str | None = None) -> AsyncIterator[bytes]:
-        body = self.build_chat_body(model, messages, session_id)
+    async def stream_chat(self, model: str, messages: list[dict], session_id: str | None = None,
+                          tools: list[dict] | None = None, tool_choice=None) -> AsyncIterator[bytes]:
+        body = self.build_chat_body(model, messages, session_id, tools=tools, tool_choice=tool_choice)
         self._inner._trace("request", {"url": f"{self.base}/api/ide/v1/chat", "body": body, "tls": self.impersonate})
         s = self._get_session()
         async with s.stream(

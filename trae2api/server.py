@@ -147,10 +147,15 @@ async def _safe_sse(gen, model: str) -> AsyncIterator[bytes]:
         yield b"data: [DONE]\n\n"
 
 
-async def _translate_events(sse_gen, model: str, include_reasoning: bool = True) -> AsyncIterator[bytes]:
+async def _translate_events(sse_gen, model: str, include_reasoning: bool = True,
+                            tool_filter=None) -> AsyncIterator[bytes]:
     """Convert gateway SSE (progress_notice/prompt/metadata/output/token_usage/done/error)
     into OpenAI chat.completion.chunk SSE, translating Trae's text-embedded
-    function-call markup into OpenAI delta.tool_calls."""
+    function-call markup into OpenAI delta.tool_calls.
+
+    tool_filter: optional callable applied to extracted tool calls (used to
+    drop gateway-internal tools the client did not declare).
+    """
     import logging
     from .translate import ToolCallTranslator
     log = logging.getLogger("trae2api")
@@ -161,6 +166,8 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True)
     tc_index = 0
     assembler = SSEAssembler()
     translator = ToolCallTranslator()
+    if tool_filter is None:
+        tool_filter = lambda calls: calls  # noqa: E731
 
     def _base_chunk(delta: dict, finish: str | None = None) -> dict:
         return {
@@ -186,6 +193,7 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True)
                 plain, calls = translator.feed(content)
                 if plain:
                     yield _emit(_base_chunk({"content": plain}))
+                calls = tool_filter(calls)
                 for tc in calls:
                     tc["index"] = tc_index
                     tc_index += 1
@@ -208,6 +216,7 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True)
                 residual, calls = translator.finish()
                 if residual:
                     yield _emit(_base_chunk({"content": residual}))
+                calls = tool_filter(calls)
                 for tc in calls:
                     tc["index"] = tc_index
                     tc_index += 1
@@ -224,6 +233,7 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True)
         residual, calls = translator.finish()
         if residual:
             yield _emit(_base_chunk({"content": residual}))
+        calls = tool_filter(calls)
         for tc in calls:
             tc["index"] = tc_index
             tc_index += 1
@@ -254,12 +264,24 @@ async def chat_completions(request: Request):
     messages = body.get("messages") or []
     if not messages:
         raise HTTPException(status_code=400, detail="messages required")
+    client_tools = body.get("tools") or []
+    known_names = {t.get("function", {}).get("name") for t in client_tools
+                   if isinstance(t, dict) and t.get("function", {}).get("name")}
+    strict_tools = os.environ.get("TRAE2API_STRICT_TOOLS") == "1"
+    drop_foreign = strict_tools and bool(known_names)
+
+    def _filter_calls(calls: list[dict]) -> list[dict]:
+        if not drop_foreign:
+            return calls
+        return [c for c in calls if c.get("function", {}).get("name") in known_names]
 
     assert gateway is not None
     if stream:
-        gen = gateway.stream_chat(model=model, messages=messages)
+        gen = gateway.stream_chat(model=model, messages=messages,
+                                  tools=client_tools or None,
+                                  tool_choice=body.get("tool_choice"))
         return StreamingResponse(
-            _safe_sse(_translate_events(gen, model), model),
+            _safe_sse(_translate_events(gen, model, tool_filter=_filter_calls), model),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
@@ -272,7 +294,9 @@ async def chat_completions(request: Request):
         reasoning_parts: list[str] = []
         tool_calls: list[dict] = []
         usage: dict = {}
-        async for raw in gateway.stream_chat(model=model, messages=messages):
+        async for raw in gateway.stream_chat(model=model, messages=messages,
+                                             tools=client_tools or None,
+                                             tool_choice=body.get("tool_choice")):
             text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
             for event, data in assembler.feed(text):
                 if not isinstance(data, dict):
@@ -304,6 +328,10 @@ async def chat_completions(request: Request):
         import logging
         logging.getLogger("trae2api").exception("gateway chat failed")
         return JSONResponse(status_code=502, content=_error_event("internal", str(e)))
+    tool_calls = _filter_calls(tool_calls)
+    # reindex after filtering
+    for i, tc in enumerate(tool_calls):
+        tc["index"] = i
     message: dict = {"role": "assistant", "content": "".join(content_parts)}
     if reasoning_parts:
         message["reasoning_content"] = "".join(reasoning_parts)

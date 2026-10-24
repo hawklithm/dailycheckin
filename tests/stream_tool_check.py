@@ -25,6 +25,8 @@ with urllib.request.urlopen(req, timeout=150) as r:
             chunk = json.loads(line[5:])
         except json.JSONDecodeError:
             continue
+        if not isinstance(chunk, dict) or not chunk.get("choices"):
+            continue  # error payload or keep-alive
         d = chunk["choices"][0]
         events += 1
         delta = d.get("delta", {})
