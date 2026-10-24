@@ -1,0 +1,222 @@
+{
+ "session_id": "db55cba9-df5c-4f93-bfd3-8f9e727f9f4c",
+ "phase1": {
+  "events": [
+   "progress_notice",
+   "progress_notice",
+   "prompt",
+   "metadata",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "token_usage",
+   "done"
+  ],
+  "content": "<|FunctionCallBegin|>[{\"name\":\"list_dir\",\"parameters\":{\"dir_path\":\"D:\\\\workspace\\\\trae2api\"}}]<|FunctionCallEnd|>",
+  "reasoning": "\n用户现在需要查询D:\\workspace\\trae2api目录下的文件列表，调用list_dir工具对吧，参数就是dir_path填那个路径就行。哦对，直接按照工具调用的格式来，就说调用list_dir工具查询指定目录，参数dir_path是\"D:\\workspace\\trae2api\"对吧。不对，就直接正确调用就行，对吧。对，就是：\n\n<|FunctionCallBegin|>[{\"name\"",
+  "usage": {
+   "name": "ide_prompts",
+   "prompt_tokens": 53,
+   "completion_tokens": 209,
+   "total_tokens": 262,
+   "cache_creation_input_tokens": 0,
+   "cache_read_input_tokens": 0,
+   "reasoning_tokens": 0,
+   "prompt_tokens_total": 0,
+   "completion_tokens_total": 0,
+   "total_tokens_total": 0,
+   "cache_creation_input_tokens_total": 0,
+   "cache_read_input_tokens_total": 0,
+   "reasoning_tokens_total": 0,
+   "cluster": null
+  },
+  "done": {
+   "finish_reason": "stop"
+  }
+ },
+ "phase2_A_user_plain": {
+  "events": [
+   "progress_notice",
+   "progress_notice",
+   "prompt",
+   "metadata",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "token_usage",
+   "done"
+  ],
+  "content": "已查询到 `D:\\workspace\\trae2api` 目录下的内容列表如下：\n### 普通文件\n1. `file_a.py`\n2. `file_b.md`\n### 子目录\n1. `notes/`\n2. `trae2api/`\n\n如果需要进一步查询某个子目录下的文件结构，可以告知具体的子目录路径。",
+  "reasoning": "用户现在需要我把查询到的D:\\workspace\\trae2api目录下的文件列表反馈给他对吧，首先看返回的结果，里面有两个文件：file_a.py、file_b.md，还有两个子目录：notes/、trae2api/，直接清晰列出来就行。现在组织语言：\n已查询到 D:\\workspace\\trae2api 目录下的内容列表如下：\n### 文件\n1. file_a.py\n2. file_b.md\n",
+  "usage": {
+   "name": "ide_prompts",
+   "prompt_tokens": 127,
+   "completion_tokens": 232,
+   "total_tokens": 359,
+   "cache_creation_input_tokens": 0,
+   "cache_read_input_tokens": 0,
+   "reasoning_tokens": 0,
+   "prompt_tokens_total": 0,
+   "completion_tokens_total": 0,
+   "total_tokens_total": 0,
+   "cache_creation_input_tokens_total": 0,
+   "cache_read_input_tokens_total": 0,
+   "reasoning_tokens_total": 0,
+   "cluster": null
+  },
+  "done": {
+   "finish_reason": "stop"
+  }
+ },
+ "phase2_B_function_role": {
+  "events": [
+   "progress_notice",
+   "progress_notice",
+   "prompt",
+   "metadata",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "token_usage",
+   "done"
+  ],
+  "content": "<|FunctionCallBegin|>[{\"name\":\"list_dir\",\"parameters\":{\"dir_path\":\"D:\\\\workspace\\\\trae2api\"}}]<|FunctionCallEnd|>",
+  "reasoning": "用户现在需要调用list_dir工具查询指定目录的文件列表，参数就是dir_path为D:\\workspace\\trae2api，直接按照格式调用就可以了。",
+  "usage": {
+   "name": "ide_prompts",
+   "prompt_tokens": 120,
+   "completion_tokens": 73,
+   "total_tokens": 193,
+   "cache_creation_input_tokens": 0,
+   "cache_read_input_tokens": 0,
+   "reasoning_tokens": 0,
+   "prompt_tokens_total": 0,
+   "completion_tokens_total": 0,
+   "total_tokens_total": 0,
+   "cache_creation_input_tokens_total": 0,
+   "cache_read_input_tokens_total": 0,
+   "reasoning_tokens_total": 0,
+   "cluster": null
+  },
+  "done": {
+   "finish_reason": "stop"
+  }
+ },
+ "phase2_C_tool_role": {
+  "events": [
+   "progress_notice",
+   "progress_notice",
+   "prompt",
+   "metadata",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "token_usage",
+   "done"
+  ],
+  "content": "<|FunctionCallBegin|>[{\"name\":\"list_dir\",\"parameters\":{\"dir_path\":\"D:\\\\workspace\\\\trae2api\"}}]<|FunctionCallEnd|>",
+  "reasoning": "用户现在需要查询D:\\workspace\\trae2api的文件列表，之前已经调用过一次list_dir了？不对不对，哦不对，等下，不对，用户现在又发了一遍，不对，哦不对，刚才的调用是不是已经返回了？不对不对，哦不对，不对，现在应该再次调用？不对不对，不对，等下，哦不对，用户现在的请求还是查询这个目录的文件列表，所以还是调用list_dir工具，参数dir_path是D:\\workspace\\tr",
+  "usage": {
+   "name": "ide_prompts",
+   "prompt_tokens": 120,
+   "completion_tokens": 159,
+   "total_tokens": 279,
+   "cache_creation_input_tokens": 0,
+   "cache_read_input_tokens": 0,
+   "reasoning_tokens": 0,
+   "prompt_tokens_total": 0,
+   "completion_tokens_total": 0,
+   "total_tokens_total": 0,
+   "cache_creation_input_tokens_total": 0,
+   "cache_read_input_tokens_total": 0,
+   "reasoning_tokens_total": 0,
+   "cluster": null
+  },
+  "done": {
+   "finish_reason": "stop"
+  }
+ },
+ "phase2_D_markers": {
+  "events": [
+   "progress_notice",
+   "progress_notice",
+   "prompt",
+   "metadata",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "output",
+   "token_usage",
+   "done"
+  ],
+  "content": "已查询到 `D:\\workspace\\trae2api` 目录下的文件/文件夹列表如下：\n### 文件\n1. file_a.py\n2. file_b.md\n### 子目录\n1. notes/\n2. trae2api/",
+  "reasoning": "用户现在需要我返回查询到的目录下的文件列表对吧，首先看执行结果里的内容，D:\\workspace\\trae2api目录下的内容是：\n文件：\nfile_a.py\nfile_b.md\n子目录：\nnotes/\ntrae2api/\n整理一下清晰告诉用户就行。",
+  "usage": {
+   "name": "ide_prompts",
+   "prompt_tokens": 155,
+   "completion_tokens": 128,
+   "total_tokens": 283,
+   "cache_creation_input_tokens": 0,
+   "cache_read_input_tokens": 0,
+   "reasoning_tokens": 0,
+   "prompt_tokens_total": 0,
+   "completion_tokens_total": 0,
+   "total_tokens_total": 0,
+   "cache_creation_input_tokens_total": 0,
+   "cache_read_input_tokens_total": 0,
+   "reasoning_tokens_total": 0,
+   "cluster": null
+  },
+  "done": {
+   "finish_reason": "stop"
+  }
+ }
+}

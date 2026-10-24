@@ -102,30 +102,18 @@ class TraeGateway:
     def build_chat_body(model: str, messages: list[dict], session_id: str | None = None) -> dict:
         """Translate OpenAI-style messages into the gateway /chat body.
 
-        The minimal accepted shape (server answers SSE 4001 param-invalid with
-        just user_input+session_id, so those two are required); richer fields
-        are filled when available.
+        Uses translate.normalize_messages so that:
+        - system messages are preserved (prefixed to the first user turn)
+        - assistant.tool_calls are re-rendered as Trae function-call markup
+        - role:"tool"/"function" results become a user turn
+          "工具执行结果：\\n..." (the shape the gateway accepts, verified live)
         """
+        from .translate import normalize_messages, trae_history_and_input
+
         session_id = session_id or str(uuid.uuid4())
-        # split system prompts into variables-free user text for now
-        turns = [m for m in messages if m.get("role") in ("user", "assistant")]
-        user_text = ""
-        for m in reversed(messages):
-            if m.get("role") == "user":
-                content = m.get("content")
-                if isinstance(content, list):  # multimodal
-                    user_text = "".join(p.get("text", "") for p in content if isinstance(p, dict))
-                else:
-                    user_text = str(content)
-                break
-        if not user_text and turns:
-            user_text = str(turns[-1].get("content", ""))
-        chat_history = []
-        for m in turns[:-1][-20:]:
-            c = m.get("content")
-            if isinstance(c, list):
-                c = "".join(p.get("text", "") for p in c if isinstance(p, dict))
-            chat_history.append({"role": m.get("role"), "content": str(c), "type": m.get("role")})
+        turns = normalize_messages(messages)
+        user_text, chat_history = trae_history_and_input(turns)
+        chat_history = chat_history[-24:]
         body = {
             "user_input": user_text,
             "session_id": session_id,
