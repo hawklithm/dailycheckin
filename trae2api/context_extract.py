@@ -25,7 +25,13 @@ from pathlib import Path
 from typing import Any
 
 # --- client prompt markers (from the harnesses' own templates) ---------------
+# NOTE: DSH (DeepSeek Harness) writes the path JSON-quoted with a trailing dot:
+#   Current working directory: "D:\workspace\trae2api".
+# (packages/session/working-directory/src/index.ts:173)
 CWD_PATTERNS = [
+    re.compile(r'Current working directory:\s*"([^"]+)"'),
+    # DSH change notices: The working directory changed from "D:\old" to "D:\new".
+    re.compile(r'The working directory (?:is now|changed from "[^"]*" to)\s*"([^"]+)"'),
     re.compile(r"^Working directory:\s*(.+)$", re.MULTILINE),
     re.compile(r"Primary working directory:\s*(.+)$", re.MULTILINE),
     re.compile(r"\bWorking directory:\s*(.+)$", re.MULTILINE),
@@ -125,10 +131,16 @@ def extract_workspace(messages: list[dict]) -> WorkspaceContext:
         ctx.raw_markers.append("claude-code")
     if any(marker in all_text for marker in _CODEX_MARKERS):
         ctx.raw_markers.append("codex-cli")
+    if "Current runtime context." in all_text:
+        # DSH snapshot header (packages/core/system-prompt/src/index.ts:317)
+        ctx.raw_markers.append("dsh")
     if "<system-reminder>" in all_text:
         ctx.raw_markers.append("cline/system-reminder")
 
     # --- 2. working directory (authoritative first) --------------------------
+    # DSH carries the cwd inside a USER message (the runtime-context snapshot),
+    # not a system prompt, so every role is scanned. The DSH pattern is quoted
+    # and therefore wins over the loose unquoted ones.
     for _, text in texts:
         for pat in CWD_PATTERNS:
             for m in pat.finditer(text):

@@ -73,6 +73,36 @@ check("existing dirs become folders",
       "D:\\workspace\\trae2api" in ctx.folders and "D:\\workspace\\workbuddy2api" in ctx.folders,
       ctx.folders)
 
+print("== DeepSeek Harness shape (quoted cwd inside a USER snapshot) ==")
+msgs = [
+    {"role": "user", "content": (
+        "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\n"
+        "Current DSH file policy: danger-full-access. The DSH file sandbox does not restrict "
+        "file modifications by available operations.\n\n"
+        "Current DeepSeek Harness implementation checkout: \"F:\\deepseek-harness\".\n"
+        "Current working directory: \"D:\\workspace\\trae2api\".\n"
+        "Current DeepSeek Harness Web GUI URL: http://127.0.0.1:3080.")},
+    {"role": "user", "content": "看一下 trae2api 目录下有哪些文件"},
+]
+ctx = extract_workspace(msgs)
+check("dsh harness detected", "dsh" in ctx.raw_markers, ctx.raw_markers)
+check("dsh quoted cwd found", "D:\\workspace\\trae2api" in ctx.folders, ctx.folders)
+check("checkout path not mistaken for cwd",
+      "F:\\deepseek-harness" not in ctx.folders, ctx.folders)
+
+print("== DSH cleared snapshot ==")
+ctx = extract_workspace([
+    {"role": "user", "content": "Current runtime context: none. Earlier runtime-context snapshots no longer apply."},
+])
+check("cleared snapshot -> no folders", ctx.folders == [], ctx.folders)
+
+print("== DSH working-directory change notice ==")
+ctx = extract_workspace([
+    {"role": "user", "content": 'The working directory changed from "D:\\old" to "D:\\new".'},
+    {"role": "user", "content": "继续"},
+])
+check("change notice parsed", "D:\\new" in ctx.folders, ctx.folders)
+
 print("== no context at all ==")
 ctx = extract_workspace([{"role": "user", "content": "hello there"}])
 check("no folders", ctx.folders == [])

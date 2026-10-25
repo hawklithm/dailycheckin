@@ -67,6 +67,7 @@ class ToolExecutor:
             # --- search ---
             "search_by_regex": self.search_by_regex,
             "grep": self.search_by_regex,
+            "glob": self.search_by_regex,
             "search_codebase": self.search_by_regex,
             # --- shell ---
             "run_shell_command": self.run_command,
@@ -82,6 +83,7 @@ class ToolExecutor:
             "edit_file_update": self.edit_search_replace,
             "multi_edit": self.edit_search_replace,
             "edit": self.edit_search_replace,
+            "str_replace_editor": self.edit_search_replace,
             "delete_file": self.delete_file,
             "todo_write": self.todo_write,
         }
