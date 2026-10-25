@@ -132,8 +132,18 @@ class ToolExecutor:
             "file_search": self.glob_files,
             "find_files": self.glob_files,
             # --- shell ---
+            # The gateway does NOT use one fixed name: it invents command-tool
+            # names per turn (observed live: shell, run_shell_cmd, execute_cmd).
+            # Any miss returns None -> "[unsupported tool]" and the model burns
+            # a round retrying, so alias generously here.
             "run_shell_command": self.run_command,
             "run_shell_cmd": self.run_command,
+            "execute_cmd": self.run_command,
+            "execute_shell_command": self.run_command,
+            "run_terminal_cmd": self.run_command,
+            "run_terminal_command": self.run_command,
+            "cmd": self.run_command,
+            "command": self.run_command,
             "run_command": self.run_command,
             "shell_tool": self.run_command,
             "shell": self.run_command,

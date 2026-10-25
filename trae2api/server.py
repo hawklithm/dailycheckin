@@ -261,8 +261,10 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
                     # Naming the tool matters: a bare "unsupported" hid the fact
                     # that `shell` was missing from the registry for a whole
                     # session while the model kept retrying it.
-                    out = (f"[unsupported tool] 代理没有实现工具 {name!r}；"
-                           f"可用工具见代理启动日志。请换用其它工具继续。")
+                    out = (f"[unsupported tool] 代理没有实现工具 {name!r}。"
+                           f"请用下列工具之一继续：list_dir / read_file / "
+                           f"write_to_file / edit_file_search_replace / "
+                           f"search_by_regex / glob / run_shell_command / git。")
             record("tool_executed", name=name, arguments=args, result=(out or "")[:4000])
             results.append(f"[{name}]\n{out}")
         cur_messages = cur_messages + [

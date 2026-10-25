@@ -180,6 +180,16 @@ check("cmd CJK decoded", "目录" in out and "Ŀ¼" not in out, out[:80])
 out = e.run_command(command="Write-Output '\u76ee\u5f55'")
 check("pwsh CJK decoded", "目录" in out and "Ŀ¼" not in out, out[:80])
 
+print("== gateway-invented command-tool names ==")
+# The gateway does not stick to one name: one live session emitted shell,
+# run_shell_cmd and execute_cmd for the same intent, and an unregistered name
+# silently costs the model a whole round.
+for name in ("execute_cmd", "execute_shell_command", "run_terminal_cmd",
+             "run_terminal_command", "cmd", "command"):
+    out = e.run(name, json.dumps({"command": "echo hi"}))
+    check(f"{name} registered", out is not None and "[exit 0]" in out and "hi" in out,
+          str(out)[:60])
+
 print("== opt-in flag ==")
 os.environ.pop("TRAE2API_EXEC_TOOLS", None)
 check("disabled by default", enabled() is False)
