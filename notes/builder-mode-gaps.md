@@ -39,17 +39,27 @@ agent 级配置（工具白名单、自定义提示词、max mode 等）。
 {"type":"builder","name":"builder","title":"Builder"}
 ```
 
-### P0-3 `active_text_editor` 缺失
+### P0-3 `active_text_editor` —— 降级放弃（客户端不提供）
 Builder 会带当前编辑器状态（文件路径/选区/languageId）。
-→ DSH/Cline 这类客户端不带编辑器状态（DSH 明确没有该概念），
-但 Claude Code/Cursor 类客户端的 system-reminder 里有。
-→ **有则发，无则不发**（不阻塞）。
+→ 实测：DSH **没有**编辑器/选区概念（源码确认）；Claude Code / Cline /
+  Codex 也只把文件路径放进消息文本，不带结构化编辑器状态。
+→ 仅当某客户端显式提供结构化字段时才透传；当前不发。
+（与 P1-1 `code_selections` 同样属于"对 OpenAI 客户端不可得"的字段。）
 
-### P1-1 `code_selections` 缺失
-编辑器选区 `[{file_path,start_line,end_line}]`。
-→ 来源：客户端消息里的 `@文件 + 选区`（Cline 的 `[edit_file for '...']`、
-  Claude Code 的 `Note: ... was read before`）已能提取到文件，但**行号**要
-  从消息文本里再解析（如 `:24-30` / `#L24-L30` 这类 DSH 风格的引用）。
+### P1-1 `code_selections` —— **已放弃**（实证：客户端消息里没有行号）
+原始计划是从消息文本解析 `[{file_path,start_line,end_line}]`。核实后否定：
+
+- **DSH**：`packages/context/file-reference/src/grammar.ts:45-55` 的 `formatFileMention()`
+  只产出 `@path` / `@"path"`；`start_line` 仅存在于**工具参数**
+  （`tool-str-replace-editor` 的 view `[11,12]`、`read` 的 `offset/limit`），
+  由模型自行决定读哪几行，不是客户端注入。
+- **Claude Code**：`Note: <path> was read before...` 只有路径。
+- **Cline**：`[edit_file for '...']` 只有路径。
+- 消息里出现 `:24-30` 形态的文本，绝大多数是用户/模型在**讨论代码**
+  （DSH 自身提示词就要求 "append :24 or :24–30"），当成选区必然误报。
+
+结论：该字段对 OpenAI 客户端**不可得**，强行解析只会引入错误上下文。不发。
+（若未来某客户端显式提供结构化选区字段，再按原样透传。）
 
 ### P1-2 `custom_model` / `model_name`
 现在 `model_name` 不发（因为本地目录名 ≠ 网关模型名，发了会 4023）。
@@ -104,10 +114,16 @@ Builder 会带当前编辑器状态（文件路径/选区/languageId）。
 - **Builder 模式应对所有客户端生效**：`agent_type=builder` + `scene_location=2`
   让服务端给全工具集，再由上面两条路径决定谁来执行
 
-## 5. 实施顺序
+## 5. 实施顺序（已更新）
 
-1. `scene_location=2` + 发 `agent{type:builder}`（P0-1/P0-2，几行改动）
-2. `intent_name` 改为不发（P1-3）
-3. `active_text_editor`/`code_selections` 从客户端消息解析（P1-1）
-4. 图片多模态（P2）
-5. `model_name` 合法值（需要抓包，独立任务）
+1. ~~`scene_location=2` + 发 `agent{type:builder}`~~ ✅ **已完成**（commit d2392b9）
+2. ~~`intent_name` 改为不发~~ ✅ **已完成**（同上）
+3. ~~system 提示词不进入对话轮次~~ ✅ **已完成**（同上，`drop_system=True`）
+4. ~~`code_selections` 行号解析~~ ❌ **已放弃**——客户端消息里没有行号，
+   强行解析必然误报（见 P1-1 的实证）
+5. ~~`active_text_editor`~~ ❌ **降级放弃**——没有客户端提供结构化编辑器状态
+6. **`model_name` 合法值** —— 唯一剩余项，需要抓包（独立任务）
+7. 图片多模态 `multi_media`（P2，客户端带图片时才需要）
+
+> 结论：Builder 模式的核心差距（`agent_type`/`scene_location`/`agent`）已补齐；
+> 其余字段对 OpenAI 客户端不可得。真正决定效果的是 P0 两项 + 工作区感知。
