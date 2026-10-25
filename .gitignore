@@ -13,6 +13,14 @@ __pycache__/
 .venv/
 venv/
 
+# runtime logs (debug conversation dumps + stderr)
+logs/
+
+# decoded bundles / scratch decoding
+notes/aiServer_full.js
+notes/aiServer_decoded.js
+notes/strings_aiServer.json
+
 # notes: reverse-engineering evidence (local only; contains machine fingerprints)
 # notes/ is tracked intentionally EXCEPT decrypted credential material
 notes/state-copy.vscdb
