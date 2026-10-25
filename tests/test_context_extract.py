@@ -121,6 +121,27 @@ check("mention_context files", any(f["file_path"].endswith("README.md") for f in
 json.dumps({"folders": fp, "mention_context": mc}, ensure_ascii=False)
 check("payloads json-serializable", True)
 
+print("== executor rooting follows the client workspace ==")
+# Regression: extra_roots alone left the executor's PRIMARY workspace at the
+# proxy install dir, so `Get-ChildItem -Path .` listed trae2api instead of the
+# caller's project. The client-reported folder must become the primary root.
+from trae2api.server import _executor_for  # noqa: E402
+
+_dsh = [{"role": "user", "content": (
+    'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\n'
+    'Current working directory: "D:\\workspace\\re_music".\n'
+    "Current DSH file policy: danger-full-access.")}]
+_ex, _ctx = _executor_for(_dsh)
+check("primary root is client cwd", str(_ex.workspace).lower() == "d:\\workspace\\re_music",
+      str(_ex.workspace))
+check("client cwd is first root", str(_ex.roots[0]).lower() == "d:\\workspace\\re_music",
+      _ex.roots)
+check("proxy repo kept as extra root",
+      any(str(r).lower().endswith("trae2api") for r in _ex.roots[1:]), _ex.roots)
+_ex2, _ = _executor_for([{"role": "user", "content": "hello"}])
+check("no context -> proxy repo root", str(_ex2.workspace).lower().endswith("trae2api"),
+      str(_ex2.workspace))
+
 print()
 print(f"TOTAL: {PASS} passed / {FAIL} failed")
 sys.exit(1 if FAIL else 0)

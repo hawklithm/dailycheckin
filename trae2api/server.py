@@ -130,6 +130,30 @@ def _parse_sse_lines(text: str):
     yield from SSEAssembler().feed(text)
 
 
+def _executor_for(messages: list[dict]):
+    """Build a ToolExecutor rooted at the workspace the CLIENT reported.
+
+    extra_roots alone is not enough: the executor's PRIMARY workspace decides
+    both the default cwd for shell commands and how relative paths resolve. If
+    we only passed extra_roots, a command like `Get-ChildItem -Path .` ran in
+    the proxy's own install directory instead of the caller's project. So the
+    client-reported folder becomes the primary workspace and the proxy's own
+    repo is kept as an extra root.
+    """
+    from .tools import DEFAULT_WORKSPACE, ToolExecutor
+    from .context_extract import extract_workspace
+    from .debuglog import record
+
+    ws_ctx = extract_workspace(messages)
+    if ws_ctx.folders:
+        record("workspace_detected", folders=ws_ctx.folders, markers=ws_ctx.raw_markers,
+               active_files=ws_ctx.active_files, mentioned=ws_ctx.mentioned)
+        primary, extra = ws_ctx.folders[0], list(ws_ctx.folders[1:])
+        extra.append(str(DEFAULT_WORKSPACE))
+        return ToolExecutor(workspace=primary, extra_roots=extra), ws_ctx
+    return ToolExecutor(), ws_ctx
+
+
 async def _bridge_events(model: str, messages: list[dict], client_tools: list[dict],
                         known_names: set, tool_choice=None) -> AsyncIterator[bytes]:
     """Agent loop: run gateway turns, executing gateway-internal tools locally.
@@ -140,17 +164,9 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
     "工具执行结果：..." user message, looping until the model finishes.
     """
     from .translate import ToolCallTranslator
-    from .tools import ToolExecutor
     from .debuglog import record
 
-    # The bridge executes file tools against the workspace the CLIENT reported
-    # (its cwd), falling back to the proxy's own configured workspace.
-    from .context_extract import extract_workspace
-    ws_ctx = extract_workspace(messages)
-    executor = ToolExecutor(extra_roots=ws_ctx.folders)
-    if ws_ctx.folders:
-        record("workspace_detected", folders=ws_ctx.folders, markers=ws_ctx.raw_markers,
-               active_files=ws_ctx.active_files, mentioned=ws_ctx.mentioned)
+    executor, ws_ctx = _executor_for(messages)
     record("gateway_body", body=gateway_body_for_log(
         model, messages, client_tools, tool_choice))
     chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
@@ -242,7 +258,11 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
             else:
                 out = executor.run(name, args)
                 if out is None:
-                    out = "[unsupported tool] 该工具未被代理实现，将交回客户端处理"
+                    # Naming the tool matters: a bare "unsupported" hid the fact
+                    # that `shell` was missing from the registry for a whole
+                    # session while the model kept retrying it.
+                    out = (f"[unsupported tool] 代理没有实现工具 {name!r}；"
+                           f"可用工具见代理启动日志。请换用其它工具继续。")
             record("tool_executed", name=name, arguments=args, result=(out or "")[:4000])
             results.append(f"[{name}]\n{out}")
         cur_messages = cur_messages + [
@@ -486,10 +506,8 @@ async def chat_completions(request: Request):
                 client_calls = [c for c in tool_calls
                                 if c.get("function", {}).get("name") in known_names]
                 if internal and not client_calls:
-                    from .tools import ToolExecutor
-                    from .context_extract import extract_workspace
                     from .debuglog import record
-                    executor = ToolExecutor(extra_roots=extract_workspace(cur_messages).folders)
+                    executor, _ = _executor_for(cur_messages)
                     record("tool_calls_received", stream=False,
                            calls=[{"name": tc["function"]["name"],
                                    "arguments": tc["function"].get("arguments")}
@@ -513,7 +531,8 @@ async def chat_completions(request: Request):
                         else:
                             out = executor.run(name, args)
                             if out is None:
-                                out = "[unsupported tool] 该工具未被代理实现"
+                                out = (f"[unsupported tool] 代理没有实现工具 {name!r}；"
+                                       f"可用工具见代理启动日志。请换用其它工具继续。")
                         record("tool_executed", name=name, arguments=args,
                                result=(out or "")[:4000])
                         results.append(f"[{name}]\n{out}")
