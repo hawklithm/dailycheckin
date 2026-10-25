@@ -113,6 +113,29 @@ for spelling in ("path", "file_path", "filePath", "file"):
     check(f"read {spelling}", e.read_file(**{spelling: "README.md"}).startswith("--- "),
           spelling)
 
+print("== git tool (work_dir + cmd shape) ==")
+import subprocess as _sp  # noqa: E402
+_git_ok = _sp.run("git --version", shell=True, capture_output=True).returncode == 0
+if _git_ok:
+    out = e.git_command(work_dir=".", cmd="status --short")
+    check("git runs in work_dir", out.startswith("[exit") and "cwd=" in out, out[:80])
+    out = e.git_command(work_dir=".", cmd="log -1 --oneline")
+    check("git log works", "[exit 0]" in out, out[:80])
+    out = e.git_command(work_dir=".", cmd="rev-parse --abbrev-ref HEAD")
+    check("git branch works", "master" in out or "main" in out, out[:80])
+    out = e.git_command(work_dir="C:\\Windows", cmd="status")
+    check("git outside blocked", out.startswith("[blocked]"), out)
+    out = e.git_command(work_dir=".", cmd="push --force origin")
+    check("git destructive blocked", out.startswith("[blocked]"), out[:80])
+else:
+    print("  (git not installed, skipped)")
+
+print("== exec/execute/bash aliases ==")
+check("exec alias", e.run("exec", '{"command":"echo hi"}') is not None)
+check("execute_command alias", e.run("execute_command", '{"command":"echo hi"}') is not None)
+check("bash alias", e.run("bash", '{"command":"echo hi"}') is not None)
+check("git alias", e.run("git", '{"work_dir":".","cmd":"--version"}') is not None)
+
 print("== opt-in flag ==")
 os.environ.pop("TRAE2API_EXEC_TOOLS", None)
 check("disabled by default", enabled() is False)

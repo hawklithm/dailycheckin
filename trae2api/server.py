@@ -141,12 +141,18 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
     """
     from .translate import ToolCallTranslator
     from .tools import ToolExecutor
+    from .debuglog import record
 
     # The bridge executes file tools against the workspace the CLIENT reported
     # (its cwd), falling back to the proxy's own configured workspace.
     from .context_extract import extract_workspace
     ws_ctx = extract_workspace(messages)
     executor = ToolExecutor(extra_roots=ws_ctx.folders)
+    if ws_ctx.folders:
+        record("workspace_detected", folders=ws_ctx.folders, markers=ws_ctx.raw_markers,
+               active_files=ws_ctx.active_files, mentioned=ws_ctx.mentioned)
+    record("gateway_body", body=gateway_body_for_log(
+        model, messages, client_tools, body.get("tool_choice")))
     chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
     created = int(time.time())
     cur_messages = list(messages)
@@ -215,6 +221,9 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
         # execute the gateway's tools locally, then continue the loop
         names = ", ".join(tc["function"]["name"] for tc in internal)
         yield emit(base({"content": f"\n[trae2api] 执行工具: {names}\n"}))
+        record("tool_calls_received", names=names,
+               calls=[{"name": tc["function"]["name"],
+                       "arguments": tc["function"].get("arguments")} for tc in internal])
         results = []
         for tc in internal:
             name = tc["function"]["name"]
@@ -234,6 +243,7 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
                 out = executor.run(name, args)
                 if out is None:
                     out = "[unsupported tool] 该工具未被代理实现，将交回客户端处理"
+            record("tool_executed", name=name, arguments=args, result=(out or "")[:4000])
             results.append(f"[{name}]\n{out}")
         cur_messages = cur_messages + [
             {"role": "assistant", "content": "",
@@ -247,6 +257,12 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
 
 def tools_enabled() -> bool:
     return os.environ.get("TRAE2API_EXEC_TOOLS") == "1"
+
+
+def gateway_body_for_log(model: str, messages: list[dict], tools, tool_choice) -> dict:
+    """Build (and return) the exact gateway body for logging."""
+    assert gateway is not None
+    return gateway.build_chat_body(model, messages, tools=tools, tool_choice=tool_choice)
 
 
 async def _safe_sse(gen, model: str) -> AsyncIterator[bytes]:
@@ -383,6 +399,12 @@ async def chat_completions(request: Request):
     messages = body.get("messages") or []
     if not messages:
         raise HTTPException(status_code=400, detail="messages required")
+    from .debuglog import record, text_of
+    record("client_request", model=model, stream=stream,
+           tools=[t.get("function", {}).get("name") for t in (body.get("tools") or [])
+                  if isinstance(t, dict)],
+           messages=[{"role": m.get("role"), "content": text_of(m.get("content"))[:2000]}
+                     for m in messages if isinstance(m, dict)])
     client_tools = body.get("tools") or []
     known_names = {t.get("function", {}).get("name") for t in client_tools
                    if isinstance(t, dict) and t.get("function", {}).get("name")}
@@ -396,6 +418,11 @@ async def chat_completions(request: Request):
 
     assert gateway is not None
     exec_tools = tools_enabled()
+    from .debuglog import record
+    record("gateway_body", body=gateway_body_for_log(
+        model, messages, client_tools, body.get("tool_choice")),
+        exec_tools=exec_tools, builder=(bool(client_tools) or
+                                        bool(os.environ.get("TRAE2API_AGENT_TYPE", "").strip())))
     if stream:
         if exec_tools:
             gen = _bridge_events(model, messages, client_tools, known_names,
@@ -415,7 +442,6 @@ async def chat_completions(request: Request):
     from .translate import ToolCallTranslator
     translator = ToolCallTranslator()
     assembler = SSEAssembler()
-    exec_tools = tools_enabled()
     cur_messages = list(messages)
     max_rounds = int(os.environ.get("TRAE2API_MAX_TOOL_ROUNDS", "8")) if exec_tools else 1
     try:
@@ -462,7 +488,12 @@ async def chat_completions(request: Request):
                 if internal and not client_calls:
                     from .tools import ToolExecutor
                     from .context_extract import extract_workspace
+                    from .debuglog import record
                     executor = ToolExecutor(extra_roots=extract_workspace(cur_messages).folders)
+                    record("tool_calls_received", stream=False,
+                           calls=[{"name": tc["function"]["name"],
+                                   "arguments": tc["function"].get("arguments")}
+                                  for tc in internal])
                     results = []
                     for tc in internal:
                         name = tc["function"]["name"]
@@ -483,6 +514,8 @@ async def chat_completions(request: Request):
                             out = executor.run(name, args)
                             if out is None:
                                 out = "[unsupported tool] 该工具未被代理实现"
+                        record("tool_executed", name=name, arguments=args,
+                               result=(out or "")[:4000])
                         results.append(f"[{name}]\n{out}")
                     cur_messages = cur_messages + [
                         {"role": "assistant", "content": "", "tool_calls": internal},
@@ -511,6 +544,13 @@ async def chat_completions(request: Request):
     if tool_calls:
         message["tool_calls"] = tool_calls
     finish_reason = "tool_calls" if tool_calls else "stop"
+    from .debuglog import record
+    record("client_response", stream=False, finish_reason=finish_reason,
+           content="".join(content_parts)[:4000],
+           reasoning=("".join(reasoning_parts)[:2000] if reasoning_parts else ""),
+           tool_calls=[{"name": tc["function"]["name"],
+                        "arguments": tc["function"].get("arguments")} for tc in tool_calls],
+           usage=usage)
     return {
         "id": f"chatcmpl-{uuid.uuid4().hex[:24]}",
         "object": "chat.completion",

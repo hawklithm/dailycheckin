@@ -38,6 +38,15 @@ SHELL_DENYLIST = [
     r"\bshutdown\b", r"\breboot\b", r"\bmkfs\b",
     r"\bcurl\b.*\|\s*(ba)?sh", r"\bwget\b.*\|\s*(ba)?sh",
     r"\bchmod\s+777\b", r"\btaskkill\b", r"\bnet\s+user\b",
+    # destructive git operations: a wrong commit/reset/force-push from a model
+    # is unrecoverable, so block them rather than relying on git's own guards.
+    r"\bgit\s+push\b.*(--force\b|-f\b|\s-f\b)",
+    r"\bgit\s+reset\s+--hard\b",
+    r"\bgit\s+clean\s+-[a-z]*[dxf]",
+    r"\bgit\s+checkout\s+--\s",
+    r"\bgit\s+restore\s+\S+\s*$",
+    r"\bgit\s+filter-branch\b",
+    r"\bgit\s+rebase\b",
 ]
 DANGER = [re.compile(p, re.IGNORECASE) for p in SHELL_DENYLIST]
 
@@ -89,6 +98,12 @@ class ToolExecutor:
             "run_shell_cmd": self.run_command,
             "run_command": self.run_command,
             "shell_tool": self.run_command,
+            "exec": self.run_command,
+            "execute_command": self.run_command,
+            "execute": self.run_command,
+            "bash": self.run_command,
+            "terminal": self.run_command,
+            "git": self.git_command,
             # --- write / edit ---
             "write_to_file": self.write_to_file,
             "write_file": self.write_to_file,
@@ -267,6 +282,41 @@ class ToolExecutor:
             return f"[error] {e}"
         out = (p.stdout or b"").decode("utf-8", "replace") + (p.stderr or b"").decode("utf-8", "replace")
         return self._truncate(f"[exit {p.returncode}]\n{out}")
+
+    def git_command(self, **kw) -> str:
+        """Dedicated git tool: the model sends {work_dir, cmd} or {path, command}.
+
+        Runs `git <cmd>` inside work_dir (defaults to the primary workspace)
+        so relative paths in the command resolve correctly.
+        """
+        if not self.allow_shell:
+            return "[error] shell execution disabled (TRAE2API_EXEC_SHELL=0)"
+        cmd = kw.get("cmd") or kw.get("command") or kw.get("command_line") or kw.get("args")
+        if isinstance(cmd, list):
+            cmd = " ".join(str(c) for c in cmd)
+        if not cmd:
+            return "[error] missing git command"
+        work = kw.get("work_dir") or kw.get("cwd") or kw.get("path") or kw.get("dir_path")
+        cwd = str(self.workspace)
+        if work:
+            try:
+                cwd = str(self._resolve(work))
+            except PermissionError as e:
+                return f"[blocked] {e}"
+        full = f"git {str(cmd).strip()}"
+        for rx in DANGER:
+            if rx.search(full):
+                return f"[blocked] command rejected by denylist: {full[:120]}"
+        try:
+            p = subprocess.run(full, shell=True, cwd=cwd,
+                               capture_output=True, timeout=self.timeout)
+        except subprocess.TimeoutExpired:
+            return f"[error] git timed out after {self.timeout}s"
+        except Exception as e:
+            return f"[error] {e}"
+        out = ((p.stdout or b"").decode("utf-8", "replace")
+               + (p.stderr or b"").decode("utf-8", "replace"))
+        return self._truncate(f"[exit {p.returncode}] (cwd={cwd})\n{out}")
 
     # ---------- write / edit / delete ----------
 
