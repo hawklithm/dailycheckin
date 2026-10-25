@@ -173,10 +173,12 @@ def normalize_messages(messages: list[dict]) -> list[tuple[str, str]]:
     return turns
 
 
-def trae_history_and_input(turns: list[tuple[str, str]]) -> tuple[str, list[dict]]:
+def trae_history_and_input(turns: list[tuple[str, str]],
+                           drop_system: bool = False) -> tuple[str, list[dict]]:
     """Turns -> (user_input, chat_history) for the gateway body.
 
-    - system turns are prefixed to the first user turn
+    - system turns are prefixed to the first user turn (or dropped entirely
+      when drop_system=True, which keeps the real IDE's message_content clean)
     - consecutive tool_result turns merge into one user message
       "工具执行结果：\\n..." (proven accepted by the gateway)
     - user_input is the content of the final user-ish turn
@@ -186,6 +188,8 @@ def trae_history_and_input(turns: list[tuple[str, str]]) -> tuple[str, list[dict
     first_user_seen = False
     for kind, content in turns:
         if kind == "system":
+            if drop_system:
+                continue
             system_prefix = (system_prefix + "\n\n" + content).strip() if system_prefix else content
             continue
         if kind == "tool_result":

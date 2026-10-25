@@ -164,12 +164,18 @@ class TraeGateway:
         from .context_extract import extract_workspace
 
         session_id = session_id or str(uuid.uuid4())
+        # The client's system prompt is NOT part of the user-visible turn: the
+        # real IDE sends only the user's own text in message_content/user_input
+        # (its system prompt is assembled server-side as ide_prompts). We keep
+        # the harness's system text out of the turn but still mine it for the
+        # working directory, so extract_workspace() runs on the raw messages.
+        ws = extract_workspace(messages)
         turns = normalize_messages(messages)
         if tools:
             rendered = TraeGateway.render_tool_declarations(tools, tool_choice)
             if rendered:
                 turns = [("system", rendered)] + turns
-        user_text, chat_history = trae_history_and_input(turns)
+        user_text, chat_history = trae_history_and_input(turns, drop_system=True)
         chat_history = chat_history[-24:]
         body = {
             "user_input": user_text,
@@ -188,18 +194,27 @@ class TraeGateway:
             body["parsed_query"] = [
                 {"type": "folder", "path": p} for p in ws.folders
             ] + [{"type": "file", "file_path": p} for p in ws.active_files + ws.mentioned]
-        # agent_type: 'chat' (default) or 'builder' when tools are in play -
-        # the builder template carries the full IDE toolset.
-        if tools or os.environ.get("TRAE2API_AGENT_TYPE", "").strip():
+        if ws.active_files or ws.mentioned:
+            body["code_selections"] = []
+        # agent_type / scene_location / agent.
+        # Decoded rule (createChatRequestObject -> getChatRequestAgentType):
+        #   let agentType = agent ? agent.type : 'chat';
+        #   return sceneLocation === 1 ? 'chat' : agentType;
+        # SceneLocation enum has exactly two values: 1 = inline chat (forces
+        # 'chat'), 2 = the AI sidebar "Chatview". Builder therefore needs
+        # scene_location = 2 plus an agent whose type is 'builder'.
+        builder_mode = (tools or os.environ.get("TRAE2API_AGENT_TYPE", "").strip()
+                        or os.environ.get("TRAE2API_BUILDER") == "1")
+        if builder_mode:
             body["agent_type"] = os.environ.get("TRAE2API_AGENT_TYPE") or "builder"
+            body["scene_location"] = 2
+            body["agent"] = {"type": "builder", "name": "builder", "title": "Builder"}
         else:
             body["agent_type"] = "chat"
+            body["scene_location"] = 1
         # structured message body (what the IDE sends instead of free text)
         body["message_content"] = [{"type": "text", "text_content": user_text}]
         body["message_id"] = str(uuid.uuid4())
-        body["scene_location"] = 0
-        if tools:
-            body["intent_name"] = "chat"
         # The gateway rejects unknown model_name values (4023). The IDE's own
         # model routing happens native-side; the server default is used when
         # model_name is omitted. TRAE2API_MODEL overrides everything; the
