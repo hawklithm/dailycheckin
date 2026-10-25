@@ -203,8 +203,15 @@ class TraeGateway:
         # SceneLocation enum has exactly two values: 1 = inline chat (forces
         # 'chat'), 2 = the AI sidebar "Chatview". Builder therefore needs
         # scene_location = 2 plus an agent whose type is 'builder'.
-        builder_mode = (tools or os.environ.get("TRAE2API_AGENT_TYPE", "").strip()
-                        or os.environ.get("TRAE2API_BUILDER") == "1")
+        #
+        # Default is BUILDER for every request: it carries the full IDE toolset
+        # and prompt, which is what an agent client wants. Set
+        # TRAE2API_FORCE_CHAT=1 to fall back to the lightweight chat template.
+        force_chat = os.environ.get("TRAE2API_FORCE_CHAT") == "1"
+        if force_chat:
+            builder_mode = False
+        else:
+            builder_mode = True
         if builder_mode:
             body["agent_type"] = os.environ.get("TRAE2API_AGENT_TYPE") or "builder"
             body["scene_location"] = 2

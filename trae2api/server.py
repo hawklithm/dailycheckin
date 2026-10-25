@@ -421,8 +421,8 @@ async def chat_completions(request: Request):
     from .debuglog import record
     record("gateway_body", body=gateway_body_for_log(
         model, messages, client_tools, body.get("tool_choice")),
-        exec_tools=exec_tools, builder=(bool(client_tools) or
-                                        bool(os.environ.get("TRAE2API_AGENT_TYPE", "").strip())))
+        exec_tools=exec_tools,
+        builder=os.environ.get("TRAE2API_FORCE_CHAT") != "1")
     if stream:
         if exec_tools:
             gen = _bridge_events(model, messages, client_tools, known_names,
