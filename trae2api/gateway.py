@@ -161,6 +161,7 @@ class TraeGateway:
           "工具执行结果：\\n..." (the shape the gateway accepts, verified live)
         """
         from .translate import normalize_messages, trae_history_and_input
+        from .context_extract import extract_workspace
 
         session_id = session_id or str(uuid.uuid4())
         turns = normalize_messages(messages)
@@ -175,6 +176,28 @@ class TraeGateway:
             "session_id": session_id,
             "chat_history": chat_history,
         }
+        # --- IDE-shaped context (what the real Trae client sends) -------------
+        # Trae's own client derives these from the VSCode APIs; an OpenAI
+        # caller carries the same information inside its messages (Claude Code
+        # "Working directory:", Codex <environment>, Cline system-reminder,
+        # inline @paths), so we mine it there. See context_extract.py.
+        ws = extract_workspace(messages)
+        if ws.folders:
+            body["workspace_folders"] = ws.folders_payload()
+            body["mention_context"] = ws.mention_context()
+            body["parsed_query"] = [
+                {"type": "folder", "path": p} for p in ws.folders
+            ] + [{"type": "file", "file_path": p} for p in ws.active_files + ws.mentioned]
+        # agent_type: 'chat' (default) or 'builder' when tools are in play -
+        # the builder template carries the full IDE toolset.
+        if tools or os.environ.get("TRAE2API_AGENT_TYPE", "").strip():
+            body["agent_type"] = os.environ.get("TRAE2API_AGENT_TYPE") or "builder"
+        else:
+            body["agent_type"] = "chat"
+        # structured message body (what the IDE sends instead of free text)
+        body["message_content"] = [{"type": "text", "text_content": user_text}]
+        body["message_id"] = str(uuid.uuid4())
+        body["scene_location"] = 0
         if tools:
             body["intent_name"] = "chat"
         # The gateway rejects unknown model_name values (4023). The IDE's own

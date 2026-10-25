@@ -1,0 +1,96 @@
+"""Unit tests: workspace context extraction from real client message shapes."""
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from trae2api.context_extract import extract_workspace  # noqa: E402
+
+PASS = FAIL = 0
+
+
+def check(name, cond, detail=""):
+    global PASS, FAIL
+    if cond:
+        PASS += 1
+        print(f"  ok  {name}")
+    else:
+        FAIL += 1
+        print(f" FAIL {name} {detail}")
+
+
+print("== Claude Code shape (system + system-reminder) ==")
+msgs = [
+    {"role": "system", "content": (
+        "You are an interactive agent that helps users with software engineering tasks. "
+        "# Environment\nWorking directory: D:\\workspace\\trae2api\n"
+        "Primary working directory: D:\\workspace\\trae2api\n"
+        "Filesystem sandboxing defines which files can be read or written.")},
+    {"role": "user", "content": (
+        "<system-reminder>\nAs you answer the user's questions, you can use the following context:\n"
+        "# currentDate\n  2026-10-25\n</system-reminder>\n\n帮我把 trae2api/tools.py 里的 run_command 加上超时参数")},
+]
+ctx = extract_workspace(msgs)
+check("claude harness detected", "claude-code" in ctx.raw_markers, ctx.raw_markers)
+check("working dir found", "D:\\workspace\\trae2api" in ctx.folders, ctx.folders)
+
+print("== Claude Code with read file note ==")
+msgs = [
+    {"role": "system", "content": "Working directory: /home/user/project"},
+    {"role": "user", "content": "Note: /home/user/project/src/main.py was read before the last conversation was summarized.\n现在改一下 main 函数"},
+]
+ctx = extract_workspace(msgs)
+check("posix cwd found", "/home/user/project" in ctx.folders, ctx.folders)
+check("read file tracked", "/home/user/project/src/main.py" in ctx.mentioned, ctx.mentioned)
+
+print("== Codex CLI shape ==")
+msgs = [
+    {"role": "user", "content": (
+        "<environment>\n<workspace_root>/workspace/repo</workspace_root>\n"
+        "Working directory: /workspace/repo\n</environment>\n\nfix the failing test")},
+]
+ctx = extract_workspace(msgs)
+check("codex harness detected", "codex-cli" in ctx.raw_markers, ctx.raw_markers)
+check("codex cwd found", "/workspace/repo" in ctx.folders, ctx.folders)
+
+print("== Cline edit_file shape ==")
+msgs = [
+    {"role": "user", "content": (
+        "<system-reminder>cwd: D:\\repos\\web</system-reminder>\n"
+        "[edit_file for 'D:\\repos\\web\\src\\app.js'] Result: success")},
+]
+ctx = extract_workspace(msgs)
+check("cline cwd found", "D:\\repos\\web" in ctx.folders, ctx.folders)
+check("edited file tracked", "D:\\repos\\web\\src\\app.js" in ctx.active_files, ctx.active_files)
+
+print("== plain chat with inline paths ==")
+msgs = [
+    {"role": "user", "content": "请对比 D:\\workspace\\trae2api 和 D:\\workspace\\workbuddy2api 的目录结构"},
+]
+ctx = extract_workspace(msgs)
+check("existing dirs become folders",
+      "D:\\workspace\\trae2api" in ctx.folders and "D:\\workspace\\workbuddy2api" in ctx.folders,
+      ctx.folders)
+
+print("== no context at all ==")
+ctx = extract_workspace([{"role": "user", "content": "hello there"}])
+check("no folders", ctx.folders == [])
+check("no markers", ctx.raw_markers == [])
+
+print("== payload shapes ==")
+ctx = extract_workspace([
+    {"role": "system", "content": "Working directory: D:\\workspace\\trae2api"},
+    {"role": "user", "content": "<file path=\"D:\\workspace\\trae2api\\README.md\">内容</file>\n改一下 README"},
+])
+fp = ctx.folders_payload()
+check("folders_payload shape", fp and set(fp[0]) == {"path", "name"}, fp)
+mc = ctx.mention_context()
+check("mention_context keys", {"hashWorkspace", "hashFiles", "hashFolders"} <= set(mc), list(mc))
+check("mention_context files", any(f["file_path"].endswith("README.md") for f in mc["hashFiles"]), mc["hashFiles"])
+json.dumps({"folders": fp, "mention_context": mc}, ensure_ascii=False)
+check("payloads json-serializable", True)
+
+print()
+print(f"TOTAL: {PASS} passed / {FAIL} failed")
+sys.exit(1 if FAIL else 0)
