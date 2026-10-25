@@ -34,7 +34,10 @@ DEFAULT_WORKSPACE = Path(__file__).resolve().parent.parent
 MAX_OUTPUT_CHARS = 8000
 
 SHELL_DENYLIST = [
-    r"\brm\s+-rf\b", r"\bdel\s+/[fs]\b", r"\brmdir\b", r"\bformat\b",
+    r"\brm\s+-rf\b", r"\bdel\s+/[fs]\b", r"\brmdir\b",
+    # 'format C:' (disk format) must not match PowerShell's Format-Table /
+    # Format-List cmdlets, so require a drive letter or no argument after it.
+    r"\bformat\s+[A-Za-z]:", r"\bformat\s*$",
     r"\bshutdown\b", r"\breboot\b", r"\bmkfs\b",
     r"\bcurl\b.*\|\s*(ba)?sh", r"\bwget\b.*\|\s*(ba)?sh",
     r"\bchmod\s+777\b", r"\btaskkill\b", r"\bnet\s+user\b",
@@ -49,6 +52,41 @@ SHELL_DENYLIST = [
     r"\bgit\s+rebase\b",
 ]
 DANGER = [re.compile(p, re.IGNORECASE) for p in SHELL_DENYLIST]
+
+# Forced on PowerShell children so their stdout is UTF-8 instead of the console
+# codepage (GBK here). Without it Chinese paths come back as mojibake and the
+# model cannot re-use them.
+PWSH_UTF8_PREAMBLE = "$OutputEncoding=[Console]::OutputEncoding=[Text.Encoding]::UTF8;"
+
+# PowerShell's approved verb list. A `verb-noun` token is only treated as a
+# cmdlet when its verb is in this set, so `well-known` or `git-clone` stay on
+# cmd.exe while `get-childitem`, `Write-Output` and `format-table` route to
+# PowerShell regardless of how the model capitalised them.
+PWSH_VERBS = frozenset("""
+add clear close copy enter exit find format get hide join lock move new open pop
+push remove rename reset resize resolve search select set show skip split start
+step stop submit switch tee test trace unblock undo unlock use wait watch where
+write out read invoke measure sort group compare convert import export merge
+update install uninstall save restore backup check build publish register
+""".split())
+PWSH_CMDLET = re.compile(r"\b([A-Za-z]+)-([A-Za-z]+)\b")
+
+
+def decode_output(raw: bytes | None) -> str:
+    """Decode child-process output, preferring UTF-8 but tolerating GBK.
+
+    Windows tools (cmd.exe builtins, native exes) still write in the console
+    codepage, so a strict UTF-8 decode mangles them. Order matters: UTF-8 first
+    because we force it for PowerShell, then the locale codepage as fallback.
+    """
+    if not raw:
+        return ""
+    for enc in ("utf-8", "gbk", "cp1252"):
+        try:
+            return raw.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return raw.decode("utf-8", "replace")
 
 
 class ToolExecutor:
@@ -98,11 +136,14 @@ class ToolExecutor:
             "run_shell_cmd": self.run_command,
             "run_command": self.run_command,
             "shell_tool": self.run_command,
+            "shell": self.run_command,
             "exec": self.run_command,
             "execute_command": self.run_command,
             "execute": self.run_command,
             "bash": self.run_command,
             "terminal": self.run_command,
+            "pwsh": self.run_command,
+            "powershell": self.run_command,
             "git": self.git_command,
             # --- write / edit ---
             "write_to_file": self.write_to_file,
@@ -273,15 +314,38 @@ class ToolExecutor:
         for rx in DANGER:
             if rx.search(cmd):
                 return f"[blocked] command rejected by denylist: {cmd[:120]}"
+        # The caller's cwd (Trae sends {command, cwd}); defaults to the primary
+        # workspace so relative paths resolve there.
+        work = kw.get("cwd") or kw.get("work_dir") or kw.get("path") or kw.get("dir_path")
+        cwd = str(self.workspace)
+        if work:
+            try:
+                cwd = str(self._resolve(work))
+            except PermissionError as e:
+                return f"[blocked] {e}"
+        # The model often emits PowerShell syntax (Get-ChildItem, | Format-Table,
+        # Select-Object). cmd.exe cannot run those, so pick the interpreter by
+        # content. Matching the Verb-Noun convention against PowerShell's verb
+        # list beats enumerating cmdlets: an enumeration silently sent
+        # Write-Output / Add-Content / Join-Path to cmd.exe.
+        use_pwsh = bool(
+            any(m.group(1).lower() in PWSH_VERBS for m in PWSH_CMDLET.finditer(cmd))
+            or re.search(r"\$env:|\$PSScriptRoot|\$_\b|^\s*&?\s*(pwsh|powershell)\b", cmd)
+        )
+        argv = cmd
+        if use_pwsh:
+            exe = "powershell.exe" if os.name == "nt" else "pwsh"
+            argv = [exe, "-NoProfile", "-NonInteractive", "-Command",
+                    PWSH_UTF8_PREAMBLE + cmd]
         try:
-            p = subprocess.run(cmd, shell=True, cwd=str(self.workspace),
+            p = subprocess.run(argv, shell=not use_pwsh, cwd=cwd,
                                capture_output=True, timeout=self.timeout)
         except subprocess.TimeoutExpired:
             return f"[error] command timed out after {self.timeout}s"
         except Exception as e:
             return f"[error] {e}"
-        out = (p.stdout or b"").decode("utf-8", "replace") + (p.stderr or b"").decode("utf-8", "replace")
-        return self._truncate(f"[exit {p.returncode}]\n{out}")
+        out = decode_output(p.stdout) + decode_output(p.stderr)
+        return self._truncate(f"[exit {p.returncode}] (cwd={cwd})\n{out}")
 
     def git_command(self, **kw) -> str:
         """Dedicated git tool: the model sends {work_dir, cmd} or {path, command}.
@@ -314,8 +378,7 @@ class ToolExecutor:
             return f"[error] git timed out after {self.timeout}s"
         except Exception as e:
             return f"[error] {e}"
-        out = ((p.stdout or b"").decode("utf-8", "replace")
-               + (p.stderr or b"").decode("utf-8", "replace"))
+        out = decode_output(p.stdout) + decode_output(p.stderr)
         return self._truncate(f"[exit {p.returncode}] (cwd={cwd})\n{out}")
 
     # ---------- write / edit / delete ----------

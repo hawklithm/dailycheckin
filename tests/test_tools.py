@@ -136,6 +136,50 @@ check("execute_command alias", e.run("execute_command", '{"command":"echo hi"}')
 check("bash alias", e.run("bash", '{"command":"echo hi"}') is not None)
 check("git alias", e.run("git", '{"work_dir":".","cmd":"--version"}') is not None)
 
+print("== shell tool: name, cwd, and interpreter selection ==")
+# The model emits `shell` (DSH-style) and often PowerShell syntax. Both the
+# bare name and the cmdlet-vs-cmd.exe routing must work, otherwise the bridge
+# prints "执行工具: shell" and silently executes nothing.
+for name in ("shell", "pwsh", "powershell", "terminal", "run_shell_command",
+             "run_shell_cmd", "shell_tool"):
+    out = e.run(name, json.dumps({"command": "echo hi"}))
+    check(f"{name} registered", out is not None and "[exit 0]" in out, str(out)[:60])
+out = e.run_command(command="echo hi")
+check("cmd.exe path exits 0", out.startswith("[exit 0]") and "hi" in out, out[:80])
+out = e.run_command(command="echo hi", cwd="tests")
+check("cwd honoured", "tests" in out.splitlines()[0], out[:80])
+out = e.run_command(command="cd", cwd="tests")
+check("cwd is the resolved dir", str(Path.cwd() / "tests") in out, out[:120])
+# PowerShell cmdlets must route to powershell.exe, not cmd.exe.
+out = e.run_command(command="Get-ChildItem -Name test_tools.py", cwd="tests")
+check("pwsh cmdlet routed", out.startswith("[exit 0]") and "test_tools.py" in out, out[:120])
+out = e.run_command(command="Get-ChildItem -Name | Select-Object -First 2 | Format-Table",
+                    cwd="tests")
+check("Format-Table not blocked", not out.startswith("[blocked]"), out[:120])
+check("Format-Table ran", out.startswith("[exit 0]"), out[:120])
+out = e.run_command(command="format C:")
+check("disk format still blocked", out.startswith("[blocked]"), out[:60])
+out = e.run_command(command="echo Format-Table")
+check("format as argument allowed", out.startswith("[exit 0]"), out[:60])
+out = e.run_command(command="Write-Host pwsh-alive")
+check("pwsh Write-Host", out.startswith("[exit 0]") and "pwsh-alive" in out, out[:80])
+out = e.run_command(command="Write-Output pwsh-out")
+check("pwsh Write-Output", out.startswith("[exit 0]") and "pwsh-out" in out, out[:80])
+out = e.run_command(command="write-output lower-case")
+check("pwsh verb case-insensitive", out.startswith("[exit 0]") and "lower-case" in out, out[:80])
+out = e.run_command(command="Join-Path . docs")
+check("pwsh Join-Path", out.startswith("[exit 0]") and "docs" in out, out[:80])
+out = e.run_command(command="dir /b")
+check("cmd builtin stays on cmd.exe", out.startswith("[exit 0]") and "README.md" in out,
+      out[:120])
+out = e.run_command(command="git log -1 --oneline")
+check("git stays on cmd.exe", out.startswith("[exit 0]"), out[:120])
+# CJK output must not come back as GBK mojibake.
+out = e.run_command(command="echo \u76ee\u5f55")
+check("cmd CJK decoded", "目录" in out and "Ŀ¼" not in out, out[:80])
+out = e.run_command(command="Write-Output '\u76ee\u5f55'")
+check("pwsh CJK decoded", "目录" in out and "Ŀ¼" not in out, out[:80])
+
 print("== opt-in flag ==")
 os.environ.pop("TRAE2API_EXEC_TOOLS", None)
 check("disabled by default", enabled() is False)
