@@ -94,6 +94,25 @@ out = e.todo_write(todos=[{"content": "step one", "status": "in_progress"}])
 check("todo recorded", "[ok]" in out and "step one" in out, out)
 check("todo state kept", len(e._todos) == 1)
 
+print("== glob (glob patterns, not regex) ==")
+out = e.glob_files(path=".", pattern="**/*.py")
+check("glob recursive", "tests\\test_translate.py" in out or "tests/test_translate.py" in out,
+      out[:120])
+out = e.glob_files(path=".", pattern="*.md")
+check("glob flat", "README.md" in out and "notes\\auth-findings.md" not in out
+      and "notes/auth-findings.md" not in out, out[:80])
+out = e.glob_files(path=".", pattern="**/*.nonexistent")
+check("glob no match", out == "[no matches]", out)
+out = e.glob_files(path="C:\\Windows", pattern="*")
+check("glob outside blocked", out.startswith("[blocked]"), out)
+out = e.glob_files(path=".")
+check("glob missing pattern", out.startswith("[error]"), out)
+
+print("== read param spellings ==")
+for spelling in ("path", "file_path", "filePath", "file"):
+    check(f"read {spelling}", e.read_file(**{spelling: "README.md"}).startswith("--- "),
+          spelling)
+
 print("== opt-in flag ==")
 os.environ.pop("TRAE2API_EXEC_TOOLS", None)
 check("disabled by default", enabled() is False)

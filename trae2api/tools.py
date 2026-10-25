@@ -44,9 +44,22 @@ DANGER = [re.compile(p, re.IGNORECASE) for p in SHELL_DENYLIST]
 
 class ToolExecutor:
     def __init__(self, workspace: str | os.PathLike | None = None,
-                 timeout: float = 60.0, allow_shell: bool = True) -> None:
+                 timeout: float = 60.0, allow_shell: bool = True,
+                 extra_roots: list[str] | None = None) -> None:
         self.workspace = Path(workspace or os.environ.get("TRAE2API_WORKSPACE")
                               or DEFAULT_WORKSPACE).resolve()
+        # Additional roots the executor may touch. The bridge passes the
+        # workspace the CLIENT reported (its own cwd), so file tools operate
+        # on the caller's project instead of the proxy's install directory.
+        roots = [self.workspace]
+        for r in extra_roots or []:
+            try:
+                rp = Path(r).expanduser().resolve()
+            except Exception:
+                continue
+            if rp not in roots:
+                roots.append(rp)
+        self.roots = roots
         self.timeout = float(os.environ.get("TRAE2API_EXEC_TIMEOUT", timeout))
         self.allow_shell = allow_shell and os.environ.get("TRAE2API_EXEC_SHELL", "1") == "1"
         # write/delete are gated separately from read-only tools
@@ -67,8 +80,10 @@ class ToolExecutor:
             # --- search ---
             "search_by_regex": self.search_by_regex,
             "grep": self.search_by_regex,
-            "glob": self.search_by_regex,
             "search_codebase": self.search_by_regex,
+            "glob": self.glob_files,
+            "file_search": self.glob_files,
+            "find_files": self.glob_files,
             # --- shell ---
             "run_shell_command": self.run_command,
             "run_shell_cmd": self.run_command,
@@ -87,6 +102,22 @@ class ToolExecutor:
             "delete_file": self.delete_file,
             "todo_write": self.todo_write,
         }
+        # normalised index: 'listdir'/'List_Dir' -> same key
+        self._alias_index: dict[str, Any] = {}
+        for key in self.registry:
+            self._alias_index.setdefault(_normalise_name(key), self.registry[key])
+        # short forms the model tends to invent for the edit family
+        for short, target in {
+            "editfile": "edit_file_search_replace",
+            "edit": "edit_file_search_replace",
+            "replace": "edit_file_search_replace",
+            "searchreplace": "edit_file_search_replace",
+            "editfileupdates": "edit_file_update",
+            "editfileupdatefc": "edit_file_update",
+            "editfilefastapply": "edit_file_fast_apply",
+        }.items():
+            if target in self.registry:
+                self._alias_index.setdefault(short, self.registry[target])
 
     # ---------- helpers ----------
 
@@ -95,9 +126,17 @@ class ToolExecutor:
         if not p.is_absolute():
             p = self.workspace / p
         p = p.resolve()
-        if not str(p).lower().startswith(str(self.workspace).lower()):
-            raise PermissionError(f"path outside workspace: {raw}")
+        if not self._allowed(p):
+            raise PermissionError(f"path outside allowed roots: {raw}")
         return p
+
+    def _allowed(self, p: Path) -> bool:
+        for root in self.roots:
+            if str(p).lower() == str(root).lower():
+                return True
+            if str(p).lower().startswith(str(root).lower().rstrip("\\/") + os.sep):
+                return True
+        return False
 
     @staticmethod
     def _truncate(text: str) -> str:
@@ -147,6 +186,40 @@ class ToolExecutor:
         if limit:
             text = "\n".join(text.splitlines()[:int(limit)])
         return self._truncate(f"--- {p} ---\n{text}")
+
+    def glob_files(self, **kw) -> str:
+        """Glob-style file search (`**/*.kt`, `*.md`). Not a regex."""
+        pattern = kw.get("pattern") or kw.get("glob") or kw.get("query")
+        if not pattern:
+            return "[error] missing pattern"
+        root_raw = kw.get("dir_path") or kw.get("path") or "."
+        try:
+            root = self._resolve(root_raw)
+        except PermissionError as e:
+            return f"[blocked] {e}"
+        if not root.exists():
+            return f"[error] path not found: {root}"
+        try:
+            import fnmatch
+            pat = str(pattern).replace("\\", "/").lstrip("/")
+            # Neither fnmatch nor PurePath.match anchors an un-prefixed pattern
+            # ('*' crosses '/'), so match component-by-component ourselves:
+            #   '*.md'        -> exactly one component, root level only
+            #   'tests/*.py'  -> two components
+            #   '**/*.py'     -> '**' absorbs any number of components
+            pat_parts = [p for p in pat.split("/") if p]
+            hits = []
+            for p in root.rglob("*"):
+                if not p.is_file():
+                    continue
+                rel_parts = [x for x in p.relative_to(root).as_posix().split("/") if x]
+                if _glob_match(rel_parts, pat_parts):
+                    hits.append(str(p))
+                    if len(hits) >= 200:
+                        break
+        except Exception as e:
+            return f"[error] glob failed: {e}"
+        return self._truncate("\n".join(hits) or "[no matches]")
 
     def search_by_regex(self, **kw) -> str:
         pattern = kw.get("pattern") or kw.get("regex") or kw.get("query")
@@ -280,8 +353,15 @@ class ToolExecutor:
     # ---------- dispatch ----------
 
     def run(self, name: str, arguments: str) -> str | None:
-        """Execute a tool call; None means 'unknown to us' (caller passes through)."""
+        """Execute a tool call; None means 'unknown to us' (caller passes through).
+
+        Names are looked up verbatim first, then normalised (lowercased, with
+        separators removed) so model-invented variants like `listdir`,
+        `ListDir` or `read file` still resolve to the registered handler.
+        """
         fn = self.registry.get(name)
+        if fn is None:
+            fn = self._alias_index.get(_normalise_name(name))
         if fn is None:
             return None
         try:
@@ -300,3 +380,29 @@ class ToolExecutor:
 
 def enabled() -> bool:
     return os.environ.get("TRAE2API_EXEC_TOOLS") == "1"
+
+
+def _normalise_name(name: str) -> str:
+    """`listdir` / `ListDir` / `list-dir` -> `listdir` (compare key)."""
+    return re.sub(r"[^a-z0-9]", "", str(name).lower())
+
+
+def _glob_match(rel_parts: list[str], pat_parts: list[str]) -> bool:
+    """Component-wise glob match where '**' absorbs any number of components.
+
+    Unlike fnmatch/PurePath.match, an un-prefixed pattern stays anchored:
+    '*.md' matches only root-level .md files, 'tests/*.py' only that folder.
+    """
+    import fnmatch
+
+    def rec(i: int, j: int) -> bool:
+        if i == len(rel_parts):
+            return j == len(pat_parts)
+        if j == len(pat_parts):
+            return False
+        if pat_parts[j] == "**":
+            # '**' absorbs zero or more components
+            return rec(i, j + 1) or rec(i + 1, j)
+        return fnmatch.fnmatch(rel_parts[i], pat_parts[j]) and rec(i + 1, j + 1)
+
+    return rec(0, 0)

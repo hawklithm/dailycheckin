@@ -142,7 +142,11 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
     from .translate import ToolCallTranslator
     from .tools import ToolExecutor
 
-    executor = ToolExecutor()
+    # The bridge executes file tools against the workspace the CLIENT reported
+    # (its cwd), falling back to the proxy's own configured workspace.
+    from .context_extract import extract_workspace
+    ws_ctx = extract_workspace(messages)
+    executor = ToolExecutor(extra_roots=ws_ctx.folders)
     chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
     created = int(time.time())
     cur_messages = list(messages)
@@ -457,7 +461,8 @@ async def chat_completions(request: Request):
                                 if c.get("function", {}).get("name") in known_names]
                 if internal and not client_calls:
                     from .tools import ToolExecutor
-                    executor = ToolExecutor()
+                    from .context_extract import extract_workspace
+                    executor = ToolExecutor(extra_roots=extract_workspace(cur_messages).folders)
                     results = []
                     for tc in internal:
                         name = tc["function"]["name"]
