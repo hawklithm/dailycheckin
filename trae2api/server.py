@@ -152,7 +152,7 @@ async def _bridge_events(model: str, messages: list[dict], client_tools: list[di
         record("workspace_detected", folders=ws_ctx.folders, markers=ws_ctx.raw_markers,
                active_files=ws_ctx.active_files, mentioned=ws_ctx.mentioned)
     record("gateway_body", body=gateway_body_for_log(
-        model, messages, client_tools, body.get("tool_choice")))
+        model, messages, client_tools, tool_choice))
     chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
     created = int(time.time())
     cur_messages = list(messages)
