@@ -248,17 +248,76 @@ sidecar 是本地进程，`llm_raw_chat` 的请求体在它的堆里。
 用 `procdump -ma <pid>` 抓内存，然后搜 `llm_raw_chat` 附近的 JSON 明文
 （Rust serde 序列化时明文会在内存里短暂存在）。不需要管理员权限（同用户即可）。
 
-## 8. 对 trae2api 的直接意义
+## 8. ★ 抓包结论：sidecar 不走系统代理（2026-10-26 实测）
 
-**重大修正**：3.4.7 确实暴露了 V2 端点和计费接口，且**我们的凭证能通过认证**，
-但 `llm_raw_chat` 的请求体还没拼对。这说明"复刻真链路"从"必须复刻 mojo pipe"
-降级为"**只需拼对一个 HTTP 请求体**"—— 成本大幅下降，但还差最后一步。
+用 mitmproxy 完整跑了一次（管理员 + CA 装进根存储 + `http.proxy` 配好），
+抓到 **76 个请求 / 152 条记录**，但——
 
-**当前 trae2api 仍走 `/api/ide/v1/chat`，功能正常**（工具循环、builder 模式、
-cwd 都在工作），只是模型不可控、不计费、思考浅。这三个问题要等请求体拼对才能解。
-
-**注意**：凭证文件 `trae2api/trae2api.json` 之前丢失（gitignore），
-现已从 Trae storage.json 重建。若以后再丢，跑：
-```bash
-python tests/rebuild_creds.py && python tests/add_device_key.py
 ```
+hosts seen:
+   82  api.trae.cn            ← 主进程的认证/计费/配置
+   66  api.trae.com.cn        ← 同上
+    4  bytegate-sg.byteintlapi.com
+```
+
+**`trae-api-cn.mchost.guru` 一次都没出现，整个 capture 里没有任何 chat/LLM 请求。**
+
+而 Trae 的设置确实生效了：
+```json
+"http.proxy": "http://127.0.0.1:8081",
+"trae.network.proxy.mode": "manual",
+"trae.network.proxy.manual.proxy": "http://127.0.0.1:8081"
+```
+
+**结论：渲染层走代理，sidecar 不走。** sidecar 用 TTNet/cronet 自己的网络栈，
+不读 VSCode 的 `http.proxy`，也不读 `HTTP_PROXY` 环境变量。
+这就是为什么所有"配代理抓包"的方案对它无效。
+
+（补充证据：抓包期间 sidecar 的外连是
+`23.200.231.108:443` → `*.deploy.static.akamaitechnologies.com`，
+Akamai CDN 边缘节点。说明它连的是 CDN 而非直连供应商，
+中间大概率还有一层自有的连接复用/加速。）
+
+### 8.1 因此失效的手段
+
+| 手段 | 结果 |
+|---|---|
+| `netsh trace` | 需提权；且 TLS 密文，看不到 body |
+| mitmproxy + 系统代理 | **sidecar 绕过代理**，抓不到 |
+| sidecar 日志 `.alaudalog` | `AalG` 加密，解不开 |
+| 进程内存扫描 | psutil 不暴露 Windows 堆 |
+
+### 8.2 还没试的手段（给下一步）
+
+1. **`ICUBE_PROXY_HOST` / `ICUBE_PROXY_PORT`**：`main.js` 里确实有
+   `process.env.ICUBE_PROXY_HOST = ...`。这是**专门给 sidecar 的代理开关**，
+   不是 VSCode 的 `http.proxy`。启动 Trae 时设这两个环境变量，
+   sidecar 可能就会走我们的 mitmproxy。**这是最有希望的一条。**
+   试法（管理员 PowerShell）：
+   ```powershell
+   $env:ICUBE_PROXY_HOST = "127.0.0.1"
+   $env:ICUBE_PROXY_PORT = "8081"
+   & "D:\Users\marcus\AppData\Local\Programs\Trae CN\Trae CN.exe" --preserve-env
+   ```
+   （`--preserve-env` 让父进程 env 传进 sidecar，前面已验证有效）
+2. **`--force-user-env`** CLI 参数（在 main.js 的 CLI 定义里见过），
+   语义可能比 `--preserve-env` 更直接。
+3. **hook sidecar 的 socket 层**（Frida / Detours），成本高。
+
+## 9. 当前状态总结
+
+**已确认**：
+- 3.4.7 有 `/api/ide/v2/llm_raw_chat`、`/api/v1/commercial/get_session_usage`，
+  我们的凭证能过认证（4001 是参数问题，不是认证问题）
+- 真实渲染层 → sidecar 的 RPC 信封结构完整拿到了（`convertReqToRustPayload`）
+- sidecar 是 `basil.mojom.NativeExtensionService` + `process-type=ai`，
+  用 `--mojo-platform-channel-handle` 通信，无 TCP 监听
+- **sidecar 不走系统代理**（本轮实测）
+
+**未解决**：`llm_raw_chat` 的正确请求体；合法 `model_name`。
+
+**trae2api 现状**：仍走 `/api/ide/v1/chat`，工具循环 / builder / cwd 都正常，
+但模型不可控、不计费、思考浅。这三个问题要等请求体拼对才能解。
+
+**下一步第一优先**：用 `ICUBE_PROXY_HOST` + `ICUBE_PROXY_PORT` 让 sidecar
+走 mitmproxy，重跑一次抓包。这是目前唯一没试过且很可能有效的路径。
