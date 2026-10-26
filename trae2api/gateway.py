@@ -65,9 +65,25 @@ class TraeGateway:
     DEV_MODEL = os.environ.get("TRAE2API_DEV_MODEL", "MS-7B89")
     DEV_OS_TYPE = os.environ.get("TRAE2API_DEV_OS_TYPE", "windows")
     DEV_OS_VERSION = os.environ.get("TRAE2API_DEV_OS_VERSION", "Windows 10 Education")
-    USER_AGENT = os.environ.get("TRAE2API_UA", "trae-cn/3.4.4")
+
+    # Client identity, copied from the live 3.4.7 client we captured with
+    # mitmproxy. The real renderer sends app-version / package-type / a VSCode
+    # UA / vscode-sessionid / trace headers.
+    #
+    # This matters concretely. POST /api/ide/v2/llm_raw_chat answers:
+    #   4001 "param is invalid"          with the legacy header set below
+    #   2001 "failed to get app config"  with these
+    # i.e. only these reach real business logic.
+    APP_VERSION = os.environ.get("TRAE2API_APP_VERSION", "3.4.7")
+    PACKAGE_TYPE = os.environ.get("TRAE2API_PACKAGE_TYPE", "stable_cn")
+    VSCODE_VERSION = os.environ.get("TRAE2API_VSCODE_VERSION", "1.107.1")
 
     def _headers(self) -> dict:
+        """Legacy header set, used by /api/ide/v1/chat.
+
+        The V1 endpoint needs these device headers - without them it answers
+        4001 - so this set must stay exactly as it is.
+        """
         jwt = self.auth.get_jwt()
         d = self.auth.device
         from urllib.parse import quote
@@ -77,7 +93,7 @@ class TraeGateway:
             "X-User-Region": self.auth.creds.region,
             "Content-Type": "application/json",
             "Accept": "text/event-stream",
-            "User-Agent": self.USER_AGENT,
+            "User-Agent": os.environ.get("TRAE2API_UA", "trae-cn/3.4.4"),
             "X-App-Id": "6eefa01c-1036-4c7e-9ca5-d891f63bfcd8",
             "x-plugin-channel": "icube-ai",
             "x-ide-version-code": "20260212",
@@ -91,6 +107,39 @@ class TraeGateway:
             h["X-Device-Id"] = d.device_id
         if d.machine_id:
             h["X-Machine-Id"] = d.machine_id
+        return h
+
+    def _modern_headers(self) -> dict:
+        """Header set the real 3.4.7 client sends (captured via mitmproxy).
+
+        Used by the newer endpoints (api/ide/v2/llm_raw_chat,
+        api/ide/v1/model_list, api/v1/commercial/*). Deliberately does NOT
+        carry the V1 device headers: including X-App-Id / X-Device-* /
+        x-ide-token makes llm_raw_chat fall back to 4001.
+        """
+        jwt = self.auth.get_jwt()
+        d = self.auth.device
+        trace = uuid.uuid4().hex[:16]
+        h = {
+            "Authorization": f"Cloud-IDE-JWT {jwt}",
+            "x-cloudide-token": self.auth.creds.token,
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+            "Accept-Language": "zh-CN",
+            "User-Agent": f"VSCode {self.VSCODE_VERSION} (Trae CN)",
+            "app-version": self.APP_VERSION,
+            "package-type": self.PACKAGE_TYPE,
+            "x-market-client-id": f"VSCode {self.VSCODE_VERSION}",
+            "x-lgw-req-sdk-type": "3",
+            "x-lscbd-aid": "787976",
+            "x-lscbd-platform": "windows",
+            "x-user-region": self.auth.creds.region or "CN",
+            "x-request-id": str(uuid.uuid4()),
+            "x-tt-trace-id": f"00-{trace}{trace[:8]}-{trace}-01",
+        }
+        if d.machine_id:
+            # the real client reuses its machineId as vscode-sessionid
+            h["vscode-sessionid"] = d.machine_id
         return h
 
     async def ping(self) -> dict:
