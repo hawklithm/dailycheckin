@@ -172,26 +172,93 @@ if defined MARSCODE_DEV_MODE (
 **注意 `meta.json` 声明了 `port: 40005`，但实测 sidecar 进程不监听该端口。**
 这条声明可能是给"模块管理框架"用的约定，实际未启用（与 3.4.4 观察一致）。
 
-## 6. 仍待确认 / 下一步
+## 6. 实测探针结果（用我们自己的凭证）
+
+已重建凭证（`tests/rebuild_creds.py` + `tests/add_device_key.py`，
+从 Trae 的 `storage.json` 解出 cloudide token + ECDSA 设备密钥），
+JWT 刷新链路恢复正常（`get_jwt()` 成功，payload 含 `source: refresh_token`）。
+
+| 端点 | 结果 | 判断 |
+|---|---|---|
+| `POST /api/ide/v1/model_list` | **400** `{"code":4001,...,"model_configs":[]}` | 端点存在，参数不对 |
+| `POST /api/ide/v1/get_model_list` | **404** TLB | 这个不存在 |
+| `POST /api/ide/v2/llm_raw_chat` | **200** SSE `event: error data:{"code":4001}` | **端点存在且认证通过**，参数不对 |
+| `POST /api/ide/v1/llm_raw_chat` | 同上 | 同上 |
+| `POST /api/v1/commercial/get_session_usage` | **200** 完整 usage 结构 | **可用** |
+
+`get_session_usage` 的返回结构（证明计费是按 session 归属的）：
+```json
+{"user_usage_group_by_session": {
+  "amount_float": 0,
+  "extra_info": {"cache_read_token":0,"cache_write_token":0,
+                 "input_token":0,"output_token":0},
+  "mode": "", "model_name": "", "product_type_list": [], "session_id": "",
+  "usage_group_details": [], "usage_time": 0, "use_max_mode": false,
+  "user_input_preview": ""}}
+```
+
+### 6.1 已排除的猜测
+
+试过都不改变 4001：
+- Content-Type：`application/json` / `protobuf` / `grpc` —— 都一样
+- 空 body / `{}` / 裸 protobuf 帧 —— 都一样
+- `model_list` 的 7 种 body 变体（空 / 只 user_info / 只 common_params /
+  service=model / data-only / full / full+data）—— 全是 4001
+- `llm_raw_chat` 的 5 种 body 变体（no data / data minimal /
+  +message_content / +model_name / +agent_type+scene_location+agent）—— 全是 4001
+
+**结论**：字段名全都在 DLL 里存在（`user_input`×98、`model_name`×55、
+`custom_model`×207、`agent_type`×135、`chat_session_id`×59、`channel_id`×35 …），
+所以不是字段名猜错，而是**这层端点不是给外部直连的**——
+它期望的请求很可能带 sidecar 内部才有的东西（`channel_id`、`request` 信封嵌套、
+或者根本就是 sidecar 内部 RPC 转 HTTP 的实现，不是公网 API）。
+
+### 6.2 试过但失败的抓包手段
+
+- `netsh trace start` → **需要管理员权限**，未提升
+- sidecar 日志 `.alaudalog`（`AalG` 魔数）→ **加密/压缩，无法解**
+  （`tests/decode_alaudalog.py`，zlib 全变体失败，无明文）
+- 读 log 尾部（Trae 运行时）→ 能读到 47KB 新增字节，但内容是 AALG 密文
+
+## 7. 仍待确认 / 下一步
 
 | 问题 | 现状 | 下一步 |
 |---|---|---|
-| `api/ide/v2/llm_raw_chat` 的请求体字段 | 只知路径，未解结构 | 从 `llm/mod.rs`、`llm_stream.rs` 附近提取字段名 |
-| 合法 `model_name` 值 | 仍不知（V1 上任何名字都 4023） | 用 `api/ide/v1/model_list` 直接问服务端（我们的凭证应该能调） |
-| sidecar 是否仍走 mojo pipe | 是（`--mojo-platform-channel-handle`） | 但**现在有 V2 HTTP 端点，可能不再需要碰 pipe** |
-| 计费归属 | `get_session_usage` 存在 | 若打 V2，需带 `chat_session_id` |
-| 日志 `.alaudalog` | 魔数 `AalG`/`Atab`，非 zlib，未解 | 低优先级 |
+| `api/ide/v2/llm_raw_chat` 的正确请求体 | 4001，所有猜测无效 | **抓真实请求**（见下） |
+| 合法 `model_name` | 仍不知 | 同上 |
+| sidecar 是否仍走 mojo pipe | 是（`--mojo-platform-channel-handle`） | — |
+| 计费归属 | `get_session_usage` 存在且可用 | 若打 V2，需带 `chat_session_id` |
 
-## 7. 对 trae2api 的直接意义
+### 7.1 抓真实请求的办法（需要管理员）
 
-**上一轮的结论"必须复刻 sidecar 才能用真链路"可能被推翻。**
-既然 3.4.7 暴露了 `api/ide/v2/llm_raw_chat`，值得直接试：
-
+`netsh trace` 需要提权。**如果愿意用管理员身份跑一次 PowerShell**：
+```powershell
+netsh trace start capture=yes tracefile=D:\trae347.etl maxsize=512
+# 然后在 Trae 里发一句话
+netsh trace stop
+# 转成可读格式
+pktmon etl2txt D:\trae347.etl        # 或 etl2pcapng + Wireshark
 ```
-POST https://trae-api-cn.mchost.guru/api/ide/v2/llm_raw_chat
-headers: Authorization: Cloud-IDE-JWT <jwt>, x-ide-token, 设备头...
-body:    {service, method, data, user_info, common_params, client_info} 形状
-```
+抓到后过滤 `trae-api-cn.mchost.guru` 的 POST，看 `llm_raw_chat` 的真实 body。
+这是目前唯一能确定正确参数的手段。
 
-比 `/api/ide/v1/chat` 多了 `model_name` 控制权，且**可能被计费**
-（有 session 归属）。这是下一轮的第一优先级实验。
+### 7.2 另一个思路：让 sidecar 自己发，我们从进程内存读
+
+sidecar 是本地进程，`llm_raw_chat` 的请求体在它的堆里。
+用 `procdump -ma <pid>` 抓内存，然后搜 `llm_raw_chat` 附近的 JSON 明文
+（Rust serde 序列化时明文会在内存里短暂存在）。不需要管理员权限（同用户即可）。
+
+## 8. 对 trae2api 的直接意义
+
+**重大修正**：3.4.7 确实暴露了 V2 端点和计费接口，且**我们的凭证能通过认证**，
+但 `llm_raw_chat` 的请求体还没拼对。这说明"复刻真链路"从"必须复刻 mojo pipe"
+降级为"**只需拼对一个 HTTP 请求体**"—— 成本大幅下降，但还差最后一步。
+
+**当前 trae2api 仍走 `/api/ide/v1/chat`，功能正常**（工具循环、builder 模式、
+cwd 都在工作），只是模型不可控、不计费、思考浅。这三个问题要等请求体拼对才能解。
+
+**注意**：凭证文件 `trae2api/trae2api.json` 之前丢失（gitignore），
+现已从 Trae storage.json 重建。若以后再丢，跑：
+```bash
+python tests/rebuild_creds.py && python tests/add_device_key.py
+```
