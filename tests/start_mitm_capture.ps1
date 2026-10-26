@@ -1,8 +1,12 @@
-# 一键抓 Trae 真实 LLM 请求（在【管理员】PowerShell 里执行）
+# One-command capture of Trae's real LLM request. Run in an ADMIN PowerShell:
 #   D:\workspace\trae2api\tests\start_mitm_capture.ps1
 #
-# 已验证可用：mitmdump 11.0.2 装在 D:\workspace\trae2api\.mitm，
-# CA 已生成于 D:\mitmconf，HTTPS 解密链路自测通过。
+# Verified working: mitmdump 11.0.2 in D:\workspace\trae2api\.mitm, CA in
+# D:\mitmconf, HTTPS decryption self-tested.
+#
+# NOTE: this file is deliberately ASCII-only. Windows PowerShell 5.1 reads .ps1
+# as the system ANSI codepage without a BOM, so any non-ASCII character becomes
+# invalid bytes and the script fails to parse.
 $ErrorActionPreference = "Stop"
 
 $PORT = 8081
@@ -10,27 +14,28 @@ $LOG  = "D:\workspace\trae2api\logs\mitm-requests.jsonl"
 $FLOW = "D:\trae_capture.flow"
 $CONF = "D:\mitmconf"
 
-# 清掉上一次的捕获
+# drop the previous capture
 Remove-Item $LOG -ErrorAction SilentlyContinue
 
-# 把 mitmproxy CA 装进当前用户根存储（管理员才能写；避免 Trae 报证书错）
+# install the mitmproxy CA into the user root store (needs admin, avoids TLS
+# errors inside Trae)
 $caPem = Join-Path $CONF "mitmproxy-ca-cert.cer"
 if (Test-Path $caPem) {
-    Write-Host "== 安装 mitmproxy CA 到根存储 =="
+    Write-Host "== installing mitmproxy CA into the root store =="
     certutil -user -addstore Root $caPem
 } else {
-    Write-Host "!! 没找到 CA：$caPem （先跑一次本脚本生成）"
+    Write-Host "!! CA not found: $caPem (run this script once to generate it)"
 }
 
 Write-Host ""
-Write-Host "== 启动 mitmdump（127.0.0.1:$PORT）=="
-Write-Host "   日志: $LOG"
+Write-Host "== starting mitmdump on 127.0.0.1:$PORT =="
+Write-Host "   log: $LOG"
 Write-Host ""
-Write-Host ">>> 请你做两步："
-Write-Host "    1. Trae 设置里搜 http.proxy，填  http://127.0.0.1:$PORT"
-Write-Host "    2. 重启 Trae，然后在 AI 对话里随便发一句话（比如 你好）"
+Write-Host ">>> now do these two things:"
+Write-Host "    1. In Trae settings search 'http.proxy' and set it to http://127.0.0.1:$PORT"
+Write-Host "    2. Restart Trae, then send any message in the AI chat (e.g. hello)"
 Write-Host ""
-Write-Host ">>> 回来按 Ctrl+C 停止，然后跑："
+Write-Host ">>> come back, press Ctrl+C to stop, then run:"
 Write-Host "    python D:\workspace\trae2api\tests\read_mitm_log.py"
 Write-Host ""
 
