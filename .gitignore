@@ -13,6 +13,9 @@ __pycache__/
 .venv/
 venv/
 
+# mitmproxy installed here for the capture tooling (not part of the repo)
+.mitm/
+
 # runtime logs (debug conversation dumps + stderr)
 logs/
 
