@@ -1,12 +1,45 @@
 # trae2api
 
-TRAE CN IDE (3.4.4) AI 后端的 OpenAI 兼容代理。通过逆向 Trae 的认证与网关协议，把 Trae 订阅内的模型能力以 `/v1/chat/completions` 形式暴露出来。
+TRAE CN IDE (3.4.7) AI 后端的 OpenAI 兼容代理。通过逆向 Trae 的认证与网关协议，把 Trae 订阅内的模型能力以 `/v1/chat/completions` 形式暴露出来。
 
-## 状态: ✅ 可用
+## 状态: ✅ 可用（但有明确能力上限）
 
 - 认证: 从本机 Trae 安装读取凭据（已实测 200 OK）
 - 聊天: OpenAI 兼容 `/v1/chat/completions`（流式 + 非流式，已实测返回真实模型回复）
 - 模型列表: `/v1/models`（来自 Trae 本地模型目录缓存）
+- 用量回显: 最终 chunk 带真实 `usage`（prompt/completion/total，已实测）
+
+## ⚠️ 能力上限（2026-10-27 逆向确认）
+
+本代理走的是 `POST /api/ide/v1/chat`，这是 Trae 的**旧版聊天通道**。
+原生 Trae 客户端的 agent 能力**无法通过 HTTP 获得**，原因是架构性的：
+
+| 能力 | 本代理 | 原生客户端 | 原因 |
+|---|---|---|---|
+| 发 prompt 拿回复 | ✅ | ✅ | 同一 HTTP 通道 |
+| 流式输出 | ✅ | ✅ | SSE |
+| token 用量 | ✅ | ✅ | 本轮新增 |
+| **模型选择** | ❌ | ✅ | 服务端按端点定死，传名即 4023 |
+| **结构化 tool_call** | ❌ | ✅ | 该端点输出层 `tool_calls` 恒为 null |
+| **思考过程（thought）** | ❌ | ✅ | 属 agent 事件流（28 种事件里我们只能拿到 7 种） |
+| **agent 循环 / 子代理** | ❌ | ✅ | 见下 |
+
+**根因**：agent 能力位于 sidecar ↔ ai-server 之间的 **aha IPC**
+（`@aha-kit/rpc` + `electron.ahaIpc` + 运行时 UUID socket），
+**不是 HTTP 接口**，外部进程无法接入。
+
+已穷举证明：`api/v1/chat/*` 在远端不存在（3 方法 × 10 前缀 × 5 路径 = 150 组合全 404）。
+
+详细证据见 `notes/FINAL-VERDICT.md`。
+
+### 工具调用是怎么做的
+
+由于拿不到结构化 `tool_call`，工具能力通过 **prompt 注入** 实现：
+把工具说明写进 prompt，让模型输出
+`<|FunctionCallBegin|>[{"name":...,"parameters":...}]<|FunctionCallEnd|>` 标记，
+再由 `translate.py` 解析成 OpenAI `tool_calls`。
+
+这是该端点的唯一可行方案，不是实现偷懒。
 
 ## 快速开始
 
@@ -71,7 +104,24 @@ curl http://127.0.0.1:8080/v1/chat/completions ^
 - `POST https://trae-api-cn.mchost.guru/api/ide/v1/chat` (SSE)
 - body: `{user_input, session_id, chat_history[]}`（`model_name` 省略→服务端默认模型；传未知名会 4023）
 - 事件流: `progress_notice → prompt → metadata → output{response,reasoning_content} → token_usage → done`
-- Trae 客户端的 V2 代理聊天走原生 Rust 桥（ZeroMQ/命名管道），HTTP V1 通道与它共用云端
+- **必须使用 legacy 设备头**（`X-App-Id` / `X-Device-*` / `x-ide-token`）；
+  改用「现代头」会得到 500 / 4001 / 2001。详见 handoff 2.4。
+- 字段必须放在 body **顶层**；嵌进 `data{}` 会得到 `3003 all models failed`
+
+### 三层架构（2026-10-27 确认）
+
+```
+渲染层 workbench.js
+   │ ① mojo RPC（命名管道，单实例不可附加）
+   ▼
+sidecar ai_agent.dll          ← 34 Handler，持有会话状态
+   │ ② HTTPS + SSE  ← 本代理在这层
+   ▼
+远端 trae-api-cn.mchost.guru
+   ▲
+   │ ③ aha IPC（UUID socket，@aha-kit/rpc）← agent 能力在这层，非 HTTP
+ai-server cue-server (Node.js)
+```
 
 ### 关键主机
 | 用途 | 地址 |
@@ -86,10 +136,13 @@ curl http://127.0.0.1:8080/v1/chat/completions ^
 - `trae2api/credential_decrypt.py` — storage.json 凭据解密（已验证）
 - `trae2api/auth.py` — 凭据加载 + JWT 生命周期 + ECDSA DeviceProof 签名
 - `trae2api/gateway.py` — 网关 SSE 客户端（设备头 + 流式）
-- `trae2api/server.py` — FastAPI OpenAI 兼容层
+- `trae2api/server.py` — FastAPI OpenAI 兼容层（SSE 解析 + 工具循环 + usage 透出）
+- `trae2api/translate.py` — `<|FunctionCallBegin|>` 标记 ↔ OpenAI tool_calls
+- `trae2api/events.py` — 28 种 SSE 事件全集 + 实际可达 7 种 + 错误码语义
+- `trae2api/trae_schema.py` — 静态反编译还原的真实请求结构体字段表
 - `trae2api/model_catalog.py` — 模型目录（state.vscdb 缓存 → 静态快照）
 - `trae2api/verify_auth.py` — 只读认证验证脚本
-- `notes/` — 全部逆向证据（core-findings / auth-findings / workbench-findings / native-agent-findings）
+- `notes/` — 全部逆向证据；**先读 `FINAL-VERDICT.md` 与 `HANDOFF-2026-10-27.md`**
 
 ## 免责声明
 
