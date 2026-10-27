@@ -314,6 +314,7 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True,
     drop gateway-internal tools the client did not declare).
     """
     import logging
+    from . import events
     from .translate import ToolCallTranslator
     log = logging.getLogger("trae2api")
     chat_id = f"chatcmpl-{uuid.uuid4().hex[:24]}"
@@ -326,11 +327,22 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True,
     if tool_filter is None:
         tool_filter = lambda calls: calls  # noqa: E731
 
-    def _base_chunk(delta: dict, finish: str | None = None) -> dict:
-        return {
-            "id": chat_id, "object": "chat.completion.chunk", "created": created,
-            "model": model, "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+    # unknown/unhandled event names, reported at end of stream (never silent)
+    _unseen: dict[str, int] = {}
+    # real token usage from the gateway's token_usage event
+    _usage: dict = {}
+
+    def _base_chunk(delta: dict, finish: str | None = None,
+                    usage: dict | None = None) -> dict:
+        chunk = {
+            "id": chat_id, "object": "chat.completion.chunk",
+            "created": created, "model": model,
+            "choices": [{"index": 0, "delta": delta,
+                         "finish_reason": finish}],
         }
+        if usage:
+            chunk["usage"] = usage
+        return chunk
 
     def _emit(chunk: dict) -> bytes:
         return f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n".encode()
@@ -380,13 +392,49 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True,
                     saw_tool_calls = True
                     yield _emit(_base_chunk({"tool_calls": [tc]}))
                 finish = "tool_calls" if saw_tool_calls else "stop"
+                if _unseen:
+                    log.info("unhandled gateway events this turn: %s", _unseen)
+                if _usage:
+                    # emit a final chunk carrying real usage (OpenAI shape)
+                    yield _emit(_base_chunk({}, finish, _usage))
+                    yield b"data: [DONE]\n\n"
+                    return
                 yield _final_chunk(chat_id, created, model, finish) + b"data: [DONE]\n\n"
                 return
-            elif event in ("metadata", "prompt", "progress_notice", "token_usage"):
-                if event == "metadata" and log.isEnabledFor(10):
-                    log.debug("metadata: %s", json.dumps(data)[:200])
+            elif event == "token_usage":
+                # Capture real usage instead of discarding it. The OpenAI
+                # chunk stream can carry a usage object on the final chunk;
+                # we stash it and attach it when the stream ends.
+                try:
+                    pt = int(data.get("prompt_tokens") or 0)
+                    ct = int(data.get("completion_tokens") or 0)
+                    tt = int(data.get("total_tokens") or 0) or (pt + ct)
+                    if pt or ct or tt:
+                        _usage.update({
+                            "prompt_tokens": pt,
+                            "completion_tokens": ct,
+                            "total_tokens": tt,
+                        })
+                except (TypeError, ValueError):
+                    pass
+                continue
+            elif event in ("metadata", "prompt", "progress_notice"):
+                if event == "metadata":
+                    if log.isEnabledFor(10):
+                        log.debug("metadata: %s", json.dumps(data)[:200])
+                continue
+            elif not events.is_known(event):
+                # An unknown event used to vanish silently. If the gateway
+                # starts emitting richer agent-mode events (thought, tool_call,
+                # context_usage ...) we want to notice, not guess.
+                _unseen[event] = _unseen.get(event, 0) + 1
+                if log.isEnabledFor(10):
+                    log.debug("unhandled event %r: %s", event,
+                              json.dumps(data)[:200])
                 continue
     if not saw_done:
+        if _unseen:
+            log.info("unhandled gateway events this turn: %s", _unseen)
         residual, calls = translator.finish()
         if residual:
             yield _emit(_base_chunk({"content": residual}))
@@ -397,6 +445,10 @@ async def _translate_events(sse_gen, model: str, include_reasoning: bool = True,
             saw_tool_calls = True
             yield _emit(_base_chunk({"tool_calls": [tc]}))
         finish = "tool_calls" if saw_tool_calls else "stop"
+        if _usage:
+            yield _emit(_base_chunk({}, finish, _usage))
+            yield b"data: [DONE]\n\n"
+            return
         yield _final_chunk(chat_id, created, model, finish) + b"data: [DONE]\n\n"
 
 
