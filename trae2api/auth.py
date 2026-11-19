@@ -32,6 +32,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
 from .credential_decrypt import decrypt_value
+from .client_metadata import client_version
 
 DEFAULT_CLIENT_ID = "ono9krqynydwx5"  # Jy() default for TRAE (non-SOLO)
 EXCHANGE_PATH = "/trae/api/v3/oauth/ExchangeToken"
@@ -51,7 +52,7 @@ class DeviceInfo:
     device_type: str = "PC"
     device_name: str = "trae2api"
     device_model: str = "MS-7B89"
-    client_version: str = IDE_VERSION
+    client_version: str = field(default_factory=client_version)
     device_public_key: str = ""
     device_brand: str = "MS-7B89"
     device_cpu: str = "AMD"
@@ -159,6 +160,7 @@ class TraeAuth:
                 device_model=dev.get("deviceModel", ""),
                 device_brand=dev.get("deviceBrand", ""),
                 device_cpu=dev.get("deviceCpu", ""),
+                client_version=dev.get("clientVersion") or client_version(),
                 os_info=dev.get("osInfo", "Windows"),
                 os_version=dev.get("osVersion", "10"),
             )
@@ -238,6 +240,7 @@ class TraeAuth:
                 "deviceModel": self.device.device_model,
                 "deviceBrand": self.device.device_brand,
                 "deviceCpu": self.device.device_cpu,
+                "clientVersion": self.device.client_version,
                 "osInfo": self.device.os_info,
                 "osVersion": self.device.os_version,
                 "privateKeyPEM": self.private_key.private_bytes(

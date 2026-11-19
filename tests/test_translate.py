@@ -93,8 +93,23 @@ turns = normalize_messages([
     {"role": "user", "content": "hi"},
 ])
 user_input, history = trae_history_and_input(turns)
-check("system merged into first user turn", "【系统指令】" in user_input and "coding agent" in user_input, user_input)
+check("system retained as compatibility text", "【系统指令】" in user_input and "coding agent" in user_input, user_input)
 check("history has only final user turn", len(history) == 1 and history[0]["role"] == "user")
+
+print("== normalize_messages: interleaved system/developer retained once ==")
+turns = normalize_messages([
+    {"role": "user", "content": "first"},
+    {"role": "developer", "content": "DEVELOPER_SENTINEL"},
+    {"role": "assistant", "content": "intermediate"},
+    {"role": "system", "content": "LATE_SYSTEM_SENTINEL"},
+    {"role": "user", "content": "last"},
+])
+user_input, history = trae_history_and_input(turns)
+check("developer normalized", any(kind == "developer" for kind, _ in turns), str(turns))
+check("late instructions attach to latest user", history[-1]["content"] == user_input and
+      "DEVELOPER_SENTINEL" in user_input and "LATE_SYSTEM_SENTINEL" in user_input, user_input)
+check("each instruction appears once", user_input.count("DEVELOPER_SENTINEL") == 1 and
+      user_input.count("LATE_SYSTEM_SENTINEL") == 1, user_input)
 
 print("== normalize_messages: assistant tool_calls -> markup ==")
 turns = normalize_messages([

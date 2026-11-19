@@ -42,7 +42,8 @@ from urllib.request import Request, urlopen
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from .auth import DEFAULT_CLIENT_ID, IDE_VERSION, TraeAuth
+from .auth import DEFAULT_CLIENT_ID, TraeAuth
+from .client_metadata import client_version, device_model
 
 CONSOLE_HOST = os.environ.get("TRAE2API_CONSOLE_HOST", "https://www.trae.cn")
 API_HOST = os.environ.get("TRAE2API_API_HOST", "https://api.trae.cn")
@@ -76,6 +77,8 @@ class TraeLoginFlow:
         self.device_id = _rand_device_id()
         self.machine_id = _rand_machine_id()
         self.device_name = device_name or f"{os.environ.get('USERNAME') or os.environ.get('USER') or 'trae'}2api"
+        self.client_version = client_version()
+        self.device_model = device_model()
         self.os_name = "Windows" if os.name == "nt" else ("Darwin" if sys_platform() == "darwin" else "Linux")
         self.os_version = os_version_string()
         self.device_cpu = os.environ.get("PROCESSOR_ARCHITECTURE", "AMD64")
@@ -167,10 +170,10 @@ class TraeLoginFlow:
             "device_id": self.device_id,
             "x_device_id": self.device_id,
             "x_machine_id": self.machine_id,
-            "x_device_brand": self.device_name,
+            "x_device_brand": self.device_model,
             "x_device_type": self.os_name,
             "x_os_version": self.os_version,
-            "x_app_version": IDE_VERSION,
+            "x_app_version": self.client_version,
             "x_app_type": "trae",
             "code_challenge": self.code_challenge,
             "code_challenge_method": "S256",
@@ -186,10 +189,10 @@ class TraeLoginFlow:
             "PlatformCode": "IDE_PC",
             "DeviceType": "PC",
             "DeviceName": self.device_name,
-            "DeviceModel": self.device_name,
-            "ClientVersion": IDE_VERSION,
+            "DeviceModel": self.device_model,
+            "ClientVersion": self.client_version,
             "DevicePublicKey": self.public_key_pem,
-            "DeviceBrand": self.device_name,
+            "DeviceBrand": self.device_model,
             "DeviceCPU": self.device_cpu,
             "OSInfo": self.os_name,
             "OSVersion": self.os_version,
@@ -212,7 +215,7 @@ class TraeLoginFlow:
             "AuthCode": auth_code,
             "CodeVerifier": self.code_verifier,
             "DeviceInfo": self._device_info(),
-            "IDEVersion": IDE_VERSION,
+            "IDEVersion": self.client_version,
         }
         data = self._post_json(url, body)
         err = (data.get("ResponseMetadata") or {}).get("Error") or {}
@@ -225,7 +228,7 @@ class TraeLoginFlow:
 
     def fetch_user_info(self, token: str) -> dict:
         url = f"{self.api_host}/cloudide/api/v3/trae/GetUserInfo"
-        body = {"ReqSource": "IDE", "IDEVersion": IDE_VERSION}
+        body = {"ReqSource": "IDE", "IDEVersion": self.client_version}
         try:
             data = self._post_json(url, body, token=token)
             return (data.get("Result") or {})
@@ -274,8 +277,9 @@ class TraeLoginFlow:
         auth.device.device_id = self.device_id
         auth.device.machine_id = self.machine_id
         auth.device.device_name = self.device_name
-        auth.device.device_model = self.device_name
-        auth.device.device_brand = self.device_name
+        auth.device.device_model = self.device_model
+        auth.device.device_brand = self.device_model
+        auth.device.client_version = self.client_version
         auth.device.device_cpu = self.device_cpu
         auth.device.os_info = self.os_name
         auth.device.os_version = self.os_version

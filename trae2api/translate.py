@@ -16,7 +16,7 @@ notes/tooluse-roundtrip-capture.json):
 This module provides:
   ToolCallTranslator      - streaming scanner: Trae markup -> OpenAI tool_calls
   markup_from_tool_calls  - OpenAI tool_calls -> Trae markup (for chat history)
-  normalize_messages      - OpenAI message list -> (system_prefix, trae turns)
+  normalize_messages      - OpenAI message list -> (role-tagged Trae turns)
 """
 from __future__ import annotations
 
@@ -143,8 +143,9 @@ def normalize_messages(messages: list[dict]) -> list[tuple[str, str]]:
     """OpenAI messages -> Trae turns.
 
     Returns a list of (kind, content) where kind is one of
-    system / user / assistant / tool_result. Consecutive tool results are kept
-    as separate tool_result turns; the caller merges them into user text.
+    system / developer / user / assistant / tool_result. Consecutive tool
+    results are kept as separate tool_result turns; the caller merges them
+    into user text.
     """
     turns: list[tuple[str, str]] = []
     for m in messages or []:
@@ -155,6 +156,8 @@ def normalize_messages(messages: list[dict]) -> list[tuple[str, str]]:
         content = "" if content is None else str(content)
         if role == "system":
             turns.append(("system", content))
+        elif role == "developer":
+            turns.append(("developer", content))
         elif role == "user":
             turns.append(("user", content))
         elif role == "assistant":
@@ -173,34 +176,30 @@ def normalize_messages(messages: list[dict]) -> list[tuple[str, str]]:
     return turns
 
 
-def trae_history_and_input(turns: list[tuple[str, str]],
-                           drop_system: bool = False) -> tuple[str, list[dict]]:
+def trae_history_and_input(turns: list[tuple[str, str]]) -> tuple[str, list[dict]]:
     """Turns -> (user_input, chat_history) for the gateway body.
 
-    - system turns are prefixed to the first user turn (or dropped entirely
-      when drop_system=True, which keeps the real IDE's message_content clean)
-    - consecutive tool_result turns merge into one user message
-      "工具执行结果：\\n..." (proven accepted by the gateway)
-    - user_input is the content of the final user-ish turn
+    V1 has no proven system/developer role mapping. Those instructions are
+    therefore carried as labeled ordinary user text on the latest user-ish
+    turn, not represented as equivalent upstream roles. Keeping them on the
+    current turn also prevents a caller's history truncation from dropping
+    first-turn instructions.
+
+    Consecutive tool_result turns merge into one user message
+    "工具执行结果：\\n..." (proven accepted by the gateway).
     """
     merged: list[tuple[str, str]] = []
-    system_prefix = ""
-    first_user_seen = False
+    instructions: list[tuple[str, str]] = []
     for kind, content in turns:
-        if kind == "system":
-            if drop_system:
-                continue
-            system_prefix = (system_prefix + "\n\n" + content).strip() if system_prefix else content
+        if kind in ("system", "developer"):
+            if content.strip():
+                instructions.append((kind, content))
             continue
         if kind == "tool_result":
             if merged and merged[-1][0] == "tool_results":
                 merged[-1] = ("tool_results", merged[-1][1] + "\n" + content)
             else:
                 merged.append(("tool_results", content))
-            continue
-        if kind == "user" and not first_user_seen and system_prefix:
-            merged.append(("user", f"【系统指令】\n{system_prefix}\n\n{content}"))
-            first_user_seen = True
             continue
         merged.append((kind, content))
 
@@ -212,9 +211,29 @@ def trae_history_and_input(turns: list[tuple[str, str]],
             role = "user"
         else:
             text, role = content, kind
-        if kind == "user" or kind == "tool_results":
+        if kind in ("user", "tool_results"):
             user_input = text
         history.append({"role": role, "content": text, "type": role})
+
+    if instructions:
+        labels = {"system": "【系统指令】", "developer": "【开发者指令】"}
+        instruction_text = "\n\n".join(
+            f"{labels[kind]}\n{content}" for kind, content in instructions
+        )
+        latest_user = next(
+            (index for index in range(len(history) - 1, -1, -1)
+             if history[index]["role"] == "user"),
+            None,
+        )
+        if latest_user is None:
+            # Keep the existing continuation fallback when instructions are
+            # the only user-facing input, rather than silently dropping them.
+            history.append({"role": "user", "content": "继续", "type": "user"})
+            latest_user = len(history) - 1
+        content = history[latest_user]["content"]
+        user_input = f"{instruction_text}\n\n{content}" if content else instruction_text
+        history[latest_user]["content"] = user_input
+
     if not user_input and history:
         user_input = history[-1]["content"] or "继续"
     if not user_input:

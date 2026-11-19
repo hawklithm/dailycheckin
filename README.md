@@ -1,45 +1,43 @@
 # trae2api
 
-TRAE CN IDE (3.4.7) AI 后端的 OpenAI 兼容代理。通过逆向 Trae 的认证与网关协议，把 Trae 订阅内的模型能力以 `/v1/chat/completions` 形式暴露出来。
+TRAE CN IDE (3.4.7) 后端的 OpenAI 兼容代理。当前实现包含本地认证路径和 V1 chat upstream；历史结果曾报告文本请求成功，但远端模型选择及原生能力仍需按下方计划逐项验证。
 
-## 状态: ✅ 可用（但有明确能力上限）
+## 当前证据状态
 
-- 认证: 从本机 Trae 安装读取凭据（已实测 200 OK）
-- 聊天: OpenAI 兼容 `/v1/chat/completions`（流式 + 非流式，已实测返回真实模型回复）
-- 模型列表: `/v1/models`（来自 Trae 本地模型目录缓存）
-- 用量回显: 最终 chunk 带真实 `usage`（prompt/completion/total，已实测）
+- 代理实现了 OpenAI 兼容 `/v1/chat/completions`，并通过 V1
+  `POST /api/ide/v1/chat` 处理文本与 SSE。保存的 `_e2e_verify` 结果曾报告
+  成功回复和 usage；本轮没有重跑，不能当作当前运行验收。
+- `/v1/models` 来自本地模型目录/快照，不证明远端模型可用或实际选中。
+- 目前没有把 Trae 正常会话的一条新输入、远端请求和响应闭合到同一 turn。
+  静态 V2/V3 route、局部 HTTP 探针或 aha IPC 连接日志都不足以证明原生
+  正常链路，也不足以证明 Python 独立调用不可行。
+- 最近一次 45 秒 metadata-only baseline 安装了 `InitWithParams` 与 `Start`
+  两个 hook，记录到 0 次调用，随后正常卸载、detach 且身份复核一致；该窗口
+  没有伴随 UI 测试输入，因此只说明窗口内无可见 Cronet 请求，不说明推理路由不存在。
 
-## ⚠️ 能力上限（2026-10-27 逆向确认）
+| 能力 | 当前代理证据范围 |
+|---|---|
+| 普通文本 | V1 有历史成功结果；本轮未重验，且未证明是原生会话使用的 route。 |
+| 流式输出与 usage | V1 代码解析 SSE/usage；历史观察不能证明所有终止、错误或截断语义。 |
+| 模型选择 | 默认 V1 请求不透传调用方模型；响应会回显输入模型。本地目录不证明上游选择。 |
+| system / developer | 当前兼容修复将其作为标记文本放入普通用户内容，不等同真正 role。 |
+| tools / tool_choice | V1 使用文本兼容表示和本地工具循环；没有证明上游原生结构化 tool-call 契约。 |
+| reasoning、取消及其他事件 | 尚未按当前远端链路验证；未知能力不应标为已支持。 |
 
-本代理走的是 `POST /api/ide/v1/chat`，这是 Trae 的**旧版聊天通道**。
-原生 Trae 客户端的 agent 能力**无法通过 HTTP 获得**，原因是架构性的：
-
-| 能力 | 本代理 | 原生客户端 | 原因 |
-|---|---|---|---|
-| 发 prompt 拿回复 | ✅ | ✅ | 同一 HTTP 通道 |
-| 流式输出 | ✅ | ✅ | SSE |
-| token 用量 | ✅ | ✅ | 本轮新增 |
-| **模型选择** | ❌ | ✅ | 服务端按端点定死，传名即 4023 |
-| **结构化 tool_call** | ❌ | ✅ | 该端点输出层 `tool_calls` 恒为 null |
-| **思考过程（thought）** | ❌ | ✅ | 属 agent 事件流（28 种事件里我们只能拿到 7 种） |
-| **agent 循环 / 子代理** | ❌ | ✅ | 见下 |
-
-**根因**：agent 能力位于 sidecar ↔ ai-server 之间的 **aha IPC**
-（`@aha-kit/rpc` + `electron.ahaIpc` + 运行时 UUID socket），
-**不是 HTTP 接口**，外部进程无法接入。
-
-已穷举证明：`api/v1/chat/*` 在远端不存在（3 方法 × 10 前缀 × 5 路径 = 150 组合全 404）。
-
-详细证据见 `notes/FINAL-VERDICT.md`。
+当前证据与阶段门槛见 [Python 客户端复现计划](notes/PYTHON_CLIENT_REPRODUCTION_PLAN_2026-10-27.md)、
+[认证协议审查](notes/AUTH_PROTOCOL_REVIEW_2026-10-27.md) 和
+[原生会话取证记录](notes/NATIVE_CAPTURE_SESSION_2026-10-27.md)、
+[近期远端契约与 metadata 基线](notes/NATIVE_REMOTE_CONTRACT_2026-10-27.md)。历史结论保留在
+[FINAL-VERDICT](notes/FINAL-VERDICT.md) 与
+[HANDOFF](notes/HANDOFF-2026-10-27.md)，但其中的绝对架构结论已在文首复核说明中撤回/降级。
 
 ### 工具调用是怎么做的
 
-由于拿不到结构化 `tool_call`，工具能力通过 **prompt 注入** 实现：
-把工具说明写进 prompt，让模型输出
+当前 V1 兼容路径以普通文本传递工具说明，让模型输出
 `<|FunctionCallBegin|>[{"name":...,"parameters":...}]<|FunctionCallEnd|>` 标记，
 再由 `translate.py` 解析成 OpenAI `tool_calls`。
 
-这是该端点的唯一可行方案，不是实现偷懒。
+这是现有兼容实现，不证明上游结构化工具协议，也不是“唯一可行”结论。
 
 ## 快速开始
 
@@ -93,10 +91,10 @@ curl http://127.0.0.1:8080/v1/chat/completions ^
 1. **凭据存储**: `%APPDATA%\Trae CN\User\globalStorage\storage.json`
    - `iCubeAuthInfo://icube.cloudide` → `{token, refreshToken, userId, host, userRegion, ...}`（自研 AES-128-CBC 包装，`credential_decrypt.py` 已破解并实测）
    - `iCubeAuthInfo://icube-dc:{deviceId}` → ECDSA P-256 设备密钥对
-2. **Token 刷新**: `POST {host}/trae/api/v3/oauth/ExchangeToken`
+2. **RefreshToken 轮换（默认关闭）**: `POST {host}/trae/api/v3/oauth/ExchangeToken`
    - body: `{ClientID:"ono9krqynydwx5", RefreshToken, DeviceInfo, DeviceProof{ECDSA 签名}, IDEVersion}`
    - 签名串: `POST\n/trae/api/v3/oauth/ExchangeToken\n{ClientID}\n{RefreshToken}\n{ts}\n{nonce}`
-3. **JWT 铸造**: `POST {host}/api/v2/GetUserToken`（`X-Cloudide-Token` 头）→ RS256 JWT（14 天）
+3. **Token 使用/更新**: 当前 PKCE 登录保存 `ExchangeToken.Result.Token`；代理 `auth.py` 会优先复用有效凭据，并在特定过期/强制刷新路径尝试 `GetUserToken`。尚未证明普通 CN 推理请求必须先 mint 该 JWT，或该 token 与远端 LLM 授权头的对应关系。
 4. **请求头**: `Authorization: Cloud-IDE-JWT {jwt}` + `X-User-Region: CN` + 设备头组
    （`X-Device-Id/X-Machine-Id/X-App-Id/x-ide-version-code` 等，来自运行日志实证）
 
@@ -108,26 +106,25 @@ curl http://127.0.0.1:8080/v1/chat/completions ^
   改用「现代头」会得到 500 / 4001 / 2001。详见 handoff 2.4。
 - 字段必须放在 body **顶层**；嵌进 `data{}` 会得到 `3003 all models failed`
 
-### 三层架构（2026-10-27 确认）
+### 已观察到的独立边界（不是闭合的原生请求链）
 
 ```
-渲染层 workbench.js
-   │ ① mojo RPC（命名管道，单实例不可附加）
-   ▼
-sidecar ai_agent.dll          ← 34 Handler，持有会话状态
-   │ ② HTTPS + SSE  ← 本代理在这层
-   ▼
-远端 trae-api-cn.mchost.guru
-   ▲
-   │ ③ aha IPC（UUID socket，@aha-kit/rpc）← agent 能力在这层，非 HTTP
-ai-server cue-server (Node.js)
+Python trae2api ── V1 HTTPS/SSE 请求 ──> trae-api-cn.mchost.guru
+
+Trae renderer ── 本地 native RPC ──> ai_agent.dll / 会话处理
+                                         │
+                                         └── 该 turn 的远端请求/响应尚未与
+                                             Python V1 或某条静态 route 关联
+
+cue-server 的日志含 @aha-kit/rpc / electron.ahaIpc 连接信息；这是本地进程
+间通道证据，不等于远端推理使用该 transport。
 ```
 
 ### 关键主机
 | 用途 | 地址 |
 |---|---|
 | 认证 | `https://api.trae.cn` |
-| AI 网关 | `https://trae-api-cn.mchost.guru` |
+| 代理 V1 host（当前配置） | `https://trae-api-cn.mchost.guru` |
 | 登录页 | `https://www.trae.cn` |
 | 动态配置 | `https://api.trae.com.cn/icube/api/v1/native/config/query` |
 
@@ -138,11 +135,11 @@ ai-server cue-server (Node.js)
 - `trae2api/gateway.py` — 网关 SSE 客户端（设备头 + 流式）
 - `trae2api/server.py` — FastAPI OpenAI 兼容层（SSE 解析 + 工具循环 + usage 透出）
 - `trae2api/translate.py` — `<|FunctionCallBegin|>` 标记 ↔ OpenAI tool_calls
-- `trae2api/events.py` — 28 种 SSE 事件全集 + 实际可达 7 种 + 错误码语义
-- `trae2api/trae_schema.py` — 静态反编译还原的真实请求结构体字段表
+- `trae2api/events.py` — SSE 事件候选、当前解析逻辑与错误码语义；不代表所有上游事件已验证
+- `trae2api/trae_schema.py` — 静态结构体字段摘录，不是完整 wire schema
 - `trae2api/model_catalog.py` — 模型目录（state.vscdb 缓存 → 静态快照）
 - `trae2api/verify_auth.py` — 只读认证验证脚本
-- `notes/` — 全部逆向证据；**先读 `FINAL-VERDICT.md` 与 `HANDOFF-2026-10-27.md`**
+- `notes/` — 逆向证据；先读当前 Python 复现计划与认证审查，再把旧 verdict/handoff 当历史记录阅读
 
 ## 免责声明
 

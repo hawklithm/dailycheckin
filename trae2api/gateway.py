@@ -204,7 +204,8 @@ class TraeGateway:
         """Translate OpenAI-style messages into the gateway /chat body.
 
         Uses translate.normalize_messages so that:
-        - system messages are preserved (prefixed to the first user turn)
+        - system/developer instructions are retained as labeled ordinary user
+          text (the V1 route has no proven mapping for those roles)
         - assistant.tool_calls are re-rendered as Trae function-call markup
         - role:"tool"/"function" results become a user turn
           "工具执行结果：\\n..." (the shape the gateway accepts, verified live)
@@ -213,18 +214,12 @@ class TraeGateway:
         from .context_extract import extract_workspace
 
         session_id = session_id or str(uuid.uuid4())
-        # The client's system prompt is NOT part of the user-visible turn: the
-        # real IDE sends only the user's own text in message_content/user_input
-        # (its system prompt is assembled server-side as ide_prompts). We keep
-        # the harness's system text out of the turn but still mine it for the
-        # working directory, so extract_workspace() runs on the raw messages.
-        ws = extract_workspace(messages)
         turns = normalize_messages(messages)
         if tools:
             rendered = TraeGateway.render_tool_declarations(tools, tool_choice)
             if rendered:
                 turns = [("system", rendered)] + turns
-        user_text, chat_history = trae_history_and_input(turns, drop_system=True)
+        user_text, chat_history = trae_history_and_input(turns)
         chat_history = chat_history[-24:]
         body = {
             "user_input": user_text,
