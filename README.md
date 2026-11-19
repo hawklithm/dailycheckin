@@ -45,15 +45,19 @@ TRAE CN IDE (3.4.7) 后端的 OpenAI 兼容代理。当前实现包含本地认�
 # 依赖: Python 3.10+, fastapi, uvicorn, httpx, cryptography
 cd D:\workspace\trae2api
 
-# 方式 A: 完整登录流（无需本机 Trae，支持任意账号）
+# 方式 A: 独立登录（当前设备注册实现面向 Windows x64）
 python -m trae2api login          # 打开浏览器完成登录，凭据存 trae2api/trae2api.json
 python -m trae2api login --no-browser --timeout 3600   # 手动复制 URL
+python -m trae2api login --creds .\trae2api\trae2api.json --prepare-device  # 仅准备独立设备
 
 # 方式 B: 复用本机 Trae 的凭据（默认，只读不干扰）
 python -m trae2api                # 0.0.0.0:8080
 ```
 
 登录成功后代理优先使用 `trae2api.json`；删除该文件即回到方式 B。
+独立登录在凭据旁保存 `.device.secret` 设备配置，重复登录会复用注册 ID 和密钥。
+设备注册/激活已经实测成功；新版独立浏览器授权、换 token 和签到仍待真实验收，详见
+[独立登录实现与证据](docs/INDEPENDENT_LOGIN_2026-11-20.md)。
 
 ```bash
 # 测试
@@ -78,12 +82,12 @@ curl http://127.0.0.1:8080/v1/chat/completions ^
 | `TRAE2API_DEV_CPU/DEV_MODEL/DEV_OS_TYPE/DEV_OS_VERSION/UA` | 本机实机值 | 设备指纹覆盖 |
 
 ### 登录流（`python -m trae2api login`）原理
-1. 生成设备身份：随机 device_id（14 位）、machine_id（sha256）、ECDSA P-256 密钥对、PKCE S256 对
+1. 读取持久化的独立设备身份；首次通过 Aha 注册/激活真实硬件，保存远端 device_id、machine_id 和 ECDSA P-256 密钥，每轮重新生成 PKCE S256 对
 2. 本地起一次性 HTTP 服务器监听 `/authorize`（随机端口，30 分钟超时）
-3. 打开 `https://www.trae.cn/authorization?...`（参数与 Trae 原版逐项一致：login_version/auth_from/login_channel/auth_type/client_id/redirect/login_trace_id/auth_callback_url/machine_id/device_id/x_device_*/code_challenge...）
+3. 打开 `https://www.trae.cn/authorization?...`（按已确认的原生字段构建；plugin_version 来自 tronBuildVersion，设备字段来自系统信息，完整线上等价尚未验收）
 4. 用户在浏览器完成登录 → 重定向回 `http://127.0.0.1:{port}/authorize?authCodeInfo={"AuthCode":"..."}`
 5. `POST /trae/api/v3/oauth/ExchangeToken`（AuthCode+CodeVerifier+DeviceInfo，无签名）→ Token/RefreshToken
-6. `POST /cloudide/api/v3/trae/GetUserInfo` 拉取资料 → 保存 `trae2api.json`
+6. `POST /cloudide/api/v3/trae/GetUserInfo` 拉取有效用户资料 → 原子替换指定的独立凭据文件
 
 ## 逆向结论摘要（详见 notes/）
 

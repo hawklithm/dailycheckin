@@ -166,6 +166,9 @@ class TraeAuth:
             )
             if dev.get("privateKeyPEM"):
                 self.private_key = serialization.load_pem_private_key(dev["privateKeyPEM"].encode(), password=None)
+                self.device.device_public_key = self.private_key.public_key().public_bytes(
+                    serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+                ).decode()
             if not self.creds.jwt and self.creds.token:
                 self.creds.jwt = self.creds.token
                 self.creds.jwt_exp = _jwt_exp(self.creds.jwt)

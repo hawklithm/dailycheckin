@@ -1,5 +1,8 @@
 # Aha 设备服务：离线逆向记录
 
+> 2026-11-20 已继续定位注册/激活 URL、gzip 编码和请求字段，并实测独立注册与激活成功，见
+> [独立登录补齐记录](INDEPENDENT_LOGIN_2026-11-20.md)。本文保留早期静态证据及当时未知项。
+
 ## 证据与结论
 
 目标为本机 `D:\Users\marcus\AppData\Local\Programs\Trae CN\Trae CN.exe`，SHA-256 `eac5743ab3eafa528ae766a11a814cd0d8ea1c54cb948c66027e71479fe00ede`；以下原生代码地址均为 PE RVA。静态分析使用 PE 异常表、RIP 相对地址交叉引用及 x64 反汇编，不读取或展示本机真实 ID，不调用注册和签到服务。源码级准确性及其他版本适用性未验证。

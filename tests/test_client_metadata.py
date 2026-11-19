@@ -32,13 +32,15 @@ def test_device_version_survives_save_and_load(tmp_path):
     assert restored.device.device_id == "original-device"
 
 
-def test_login_uses_one_version_and_system_model(monkeypatch):
-    monkeypatch.setattr("trae2api.login.client_version", lambda: "3.4.20")
+def test_login_uses_one_version_and_system_model(monkeypatch, tmp_path):
+    monkeypatch.setattr("trae2api.login.client_version", lambda fallback="3.4.20": "3.4.20")
     monkeypatch.setattr("trae2api.login.device_model", lambda: "System Model")
-    flow = TraeLoginFlow(device_name="User Label")
+    monkeypatch.setattr("trae2api.login.manufacturer", lambda: "System Manufacturer")
+    flow = TraeLoginFlow(device_name="User Label", creds_file=tmp_path / "account.json")
     device = flow._device_info()
     assert device["ClientVersion"] == "3.4.20"
-    assert device["DeviceModel"] == device["DeviceBrand"] == "System Model"
+    assert device["DeviceModel"] == "System Model"
+    assert device["DeviceBrand"] == "System Manufacturer"
     assert device["DeviceName"] == "User Label"
     query = parse_qs(urlparse(flow.build_login_url(12345)).query)
     assert query["x_app_version"] == ["3.4.20"]

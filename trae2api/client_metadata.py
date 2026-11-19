@@ -17,6 +17,7 @@ class InstalledClient:
     name: str = "Trae CN"
     ug_url: str = "https://api.trae.cn"
     telemetry_enabled: bool = True
+    build_version: str = "local"
 
 
 def installed_client() -> InstalledClient:
@@ -43,7 +44,8 @@ def installed_client() -> InstalledClient:
                 name = data.get("nameShort")
                 return InstalledClient(value, editor, name if isinstance(name, str) and name else "Trae CN",
                                        ug if isinstance(ug, str) and ug else "https://api.trae.cn",
-                                       data.get("enableTelemetry") is not False)
+                                       data.get("enableTelemetry") is not False,
+                                       data.get("tronBuildVersion") or "local")
         except (OSError, ValueError):
             continue
     return InstalledClient()
