@@ -12,10 +12,17 @@ from pathlib import Path
 import time
 from typing import Any
 
+# PyCharm's script-path runner does not set the containing package.
+if __name__ == "__main__" and not __package__:
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    __package__ = "trae2api"
+
 import httpx
 from .client_metadata import clean_model, client_version, device_model, os_metadata
 from .checkin_profile import CheckinProfile, validate_base_url
-from .native_identity import NativeIdentity, NativeIdentityError
+from .native_identity import DeviceIdSource, NativeIdentity, NativeIdentityError
 
 BASE_URL = "https://api.trae.cn"
 STATUS_PATH = "/trae/api/v2/ug/checkin_credits/status"
@@ -38,8 +45,8 @@ class Account:
     native_identity: NativeIdentity | None = field(default=None, repr=False)
 
     @classmethod
-    def from_native(cls) -> "Account":
-        identity = NativeIdentity.load()
+    def from_native(cls, *, device_id_source: DeviceIdSource = "existing") -> "Account":
+        identity = NativeIdentity.load(device_id_source=device_id_source)
         try:
             _reject_expired_token(identity.token)
         except ValueError:
@@ -202,17 +209,23 @@ def main(argv: list[str] | None = None) -> int:
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--creds", help="explicit independent credentials JSON file")
     source.add_argument("--native", action="store_true", help="read the native login and corroborated remote device ID")
+    parser.add_argument("--device-id-source", choices=["existing", "get-device-id"],
+                        help="--native only: existing session-log ID (default), or our getDeviceId "
+                             "using the hardware-validated native cache; no device registration")
     parser.add_argument("--base-url", help="override the installed ug API HTTPS origin")
     parser.add_argument("--user-region", help="override the CN store region header with an observed native value")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--execute", action="store_true", help="send status and, if eligible, claim")
     mode.add_argument("--status-only", action="store_true", help="query status without claiming credits")
     args = parser.parse_args(argv)
+    if args.device_id_source is not None and not args.native:
+        parser.error("--device-id-source requires --native")
     if not args.execute and not args.status_only:
         print("Dry run: no credentials read and no requests sent. Add --execute or --status-only to run.")
         return 0
     try:
-        account = Account.from_native() if args.native else Account.from_file(args.creds)
+        account = (Account.from_native(device_id_source=args.device_id_source or "existing")
+                   if args.native else Account.from_file(args.creds))
         if args.base_url:
             account = replace(account, base_url=validate_base_url(args.base_url))
         if args.user_region is not None:

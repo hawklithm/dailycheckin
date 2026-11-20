@@ -9,6 +9,13 @@ from trae2api.checkin import Account, CheckinError, checkin, main
 from trae2api.native_identity import NativeIdentity, NativeIdentityError
 
 
+@pytest.fixture(autouse=True)
+def no_live_http(monkeypatch):
+    def denied(*args, **kwargs):
+        raise AssertionError("live HTTP forbidden in native identity tests")
+    monkeypatch.setattr(httpx.HTTPTransport, "handle_request", denied)
+
+
 @pytest.fixture
 def native(tmp_path, monkeypatch):
     root = tmp_path / "native"
@@ -26,6 +33,24 @@ def native(tmp_path, monkeypatch):
     monkeypatch.setenv("TRAE2API_USER_DATA", str(root))
     monkeypatch.setattr("trae2api.native_identity.decrypt_value", lambda value: value.removeprefix("encoded:"))
     return root, storage, session / "main.log"
+
+
+@pytest.fixture
+def implemented_native(native, monkeypatch):
+    from trae2api.aha_device_cache import DeviceRecord
+    from trae2api.aha_tiny_storage import NativeTinyStorage
+    from trae2api.device_hardware import Hardware
+
+    root, storage, log = native
+    hardware = Hardware("33221100-5544-7766-8899-AABBCCDDEEFF", "test-disk", "Test Model",
+                        "Test Brand", "Test CPU", "windows", "Windows Test", "10.0.19045")
+    monkeypatch.setattr(Hardware, "read_native", classmethod(lambda cls: hardware))
+    cache = NativeTinyStorage.for_native_client(client_root=root, writable=True)
+    cache.save_device(DeviceRecord("123456789", "987654321", hardware.pc_uuid))
+    raw = json.loads(storage.read_text())
+    raw["iCubeAuthInfo://icube-dc:123456789"] = "synthetic-device-record"
+    storage.write_text(json.dumps(raw))
+    return root, storage, log, cache, hardware
 
 
 def update_auth(storage, **changes):
@@ -154,3 +179,121 @@ def test_native_cli_status_only_uses_native_source(native, monkeypatch):
     assert main(["--native", "--status-only"]) == 0
     assert len(seen) == 1
     assert seen[0].headers["x-device-id"] == "remote-test-device"
+
+
+def test_get_device_id_source_calls_our_getter_and_preserves_native_files(implemented_native, monkeypatch):
+    from trae2api.aha_native_lifecycle import NativeAhaDeviceService
+
+    root, storage, log, cache, hardware = implemented_native
+    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    original_getter = NativeAhaDeviceService.get_device_id
+    calls = []
+    async def observed_getter(self, *args, **kwargs):
+        calls.append(self)
+        return await original_getter(self, *args, **kwargs)
+    monkeypatch.setattr(NativeAhaDeviceService, "get_device_id", observed_getter)
+    account = Account.from_native(device_id_source="get-device-id")
+    seen = []
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"enable": True, "checked_in": False})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        checkin(account, client, status_only=True)
+    assert len(calls) == 2  # Initial selection and request-time revalidation.
+    assert all(service.backend is None for service in calls)
+    assert seen[0].headers["x-device-id"] == "123456789"
+    assert seen[0].headers["authorization"] == "Cloud-IDE-JWT native-test-token"
+    assert account.native_identity.device_id_source == "get-device-id"
+    assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+
+
+def test_existing_source_does_not_read_implemented_cache(implemented_native, monkeypatch):
+    def unexpected(*args, **kwargs):
+        raise AssertionError("existing source must keep the native session-log path")
+    monkeypatch.setattr("trae2api.native_identity._implemented_device_id", unexpected)
+    assert Account.from_native().device_id == "remote-test-device"
+    assert Account.from_native(device_id_source="existing").device_id == "remote-test-device"
+
+
+def test_get_device_id_source_does_not_require_log_device_resolution(implemented_native):
+    root, storage, log, cache, hardware = implemented_native
+    log.write_text('getStoreRegion {"region":"CN"}\n')
+    assert Account.from_native(device_id_source="get-device-id").device_id == "123456789"
+    with pytest.raises(NativeIdentityError, match="no completed remote"):
+        Account.from_native(device_id_source="existing")
+
+
+@pytest.mark.parametrize("invalid", ["missing", "corrupt", "other-hardware", "zero"])
+def test_get_device_id_invalid_cache_never_uses_log_fallback_or_registration(implemented_native, invalid):
+    from trae2api.aha_device_cache import DeviceRecord
+
+    root, storage, log, cache, hardware = implemented_native
+    if invalid == "missing":
+        cache.path.unlink()
+    elif invalid == "corrupt":
+        cache.path.write_text('{"tiny_storage_data":{"aha.device.device_id":"broken"}}')
+    else:
+        cache.save_device(DeviceRecord("0" if invalid == "zero" else "123456789", "987654321",
+                                       "other-uuid" if invalid == "other-hardware" else hardware.pc_uuid))
+    with pytest.raises(NativeIdentityError, match="no valid native cache"):
+        Account.from_native(device_id_source="get-device-id")
+
+
+def test_get_device_id_source_requires_matching_native_oauth_device_record(implemented_native):
+    root, storage, log, cache, hardware = implemented_native
+    raw = json.loads(storage.read_text())
+    del raw["iCubeAuthInfo://icube-dc:123456789"]
+    storage.write_text(json.dumps(raw))
+    with pytest.raises(NativeIdentityError, match="does not match"):
+        Account.from_native(device_id_source="get-device-id")
+
+
+@pytest.mark.parametrize("changed", ["token", "device"])
+def test_get_device_id_revalidates_selected_source_before_claim(implemented_native, changed):
+    from trae2api.aha_device_cache import DeviceRecord
+
+    root, storage, log, cache, hardware = implemented_native
+    account = Account.from_native(device_id_source="get-device-id")
+    seen = []
+    def handler(request):
+        seen.append(request.url.path)
+        if changed == "token":
+            update_auth(storage, token="changed-test-token")
+        else:
+            cache.save_device(DeviceRecord("111222333", "987654321", hardware.pc_uuid))
+            raw = json.loads(storage.read_text())
+            raw["iCubeAuthInfo://icube-dc:111222333"] = "synthetic-device-record"
+            storage.write_text(json.dumps(raw))
+        return httpx.Response(200, json={"enable": True, "checked_in": False})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(CheckinError, match="changed"):
+            checkin(account, client)
+    assert seen == ["/trae/api/v2/ug/checkin_credits/status"]
+
+
+@pytest.mark.parametrize("source,expected", [("existing", "remote-test-device"), ("get-device-id", "123456789")])
+def test_cli_device_id_source_controls_sent_header(implemented_native, monkeypatch, source, expected):
+    seen = []
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"enable": True, "checked_in": False})
+    client_class = httpx.Client
+    monkeypatch.setattr("trae2api.checkin.httpx.Client",
+                        lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))
+    assert main(["--native", "--device-id-source", source, "--status-only"]) == 0
+    assert len(seen) == 1
+    assert seen[0].headers["x-device-id"] == expected
+
+
+@pytest.mark.parametrize("source", ["existing", "get-device-id"])
+def test_device_id_source_dry_run_does_not_read_identity(monkeypatch, source):
+    def unexpected(*args, **kwargs):
+        raise AssertionError("dry run must not inspect native identity or cache")
+    monkeypatch.setattr(NativeIdentity, "load", unexpected)
+    assert main(["--native", "--device-id-source", source]) == 0
+
+
+def test_device_id_source_is_rejected_with_independent_credentials():
+    with pytest.raises(SystemExit) as error:
+        main(["--creds", "unused.json", "--device-id-source", "get-device-id", "--status-only"])
+    assert error.value.code == 2

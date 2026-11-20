@@ -1,18 +1,22 @@
-"""Read a native login and corroborate its device ID without changing storage.
+"""Read a native login and corroborate its selected device-ID source.
 
-The latest session's initialization log is evidence of a resolved remote ID,
-not a live getter or a network capture. Require the matching OAuth device key
-as well; never guess an ID from an arbitrary key or fall back to a local UUID.
+The default source uses the latest session's resolved remote ID. The optional
+implemented getter uses a hardware-validated native cache without registration.
+Both require a matching OAuth device record; neither falls back to a local UUID.
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 import json
 import os
 from pathlib import Path
 import re
+from typing import Literal
 
 from .credential_decrypt import decrypt_value
+
+DeviceIdSource = Literal["existing", "get-device-id"]
 
 
 class NativeIdentityError(ValueError):
@@ -28,6 +32,34 @@ def native_user_data() -> Path:
     raise NativeIdentityError("native user-data directory unavailable; set TRAE2API_USER_DATA")
 
 
+def _implemented_device_id(root: Path) -> str:
+    """Use our native getter with a validated cache and no registration backend."""
+    from .aha_native_lifecycle import NativeAhaDeviceService
+    from .aha_tiny_storage import NativeTinyStorage
+    from .device_hardware import Hardware
+
+    async def resolve():
+        hardware = await asyncio.to_thread(Hardware.read_native)
+        storage = NativeTinyStorage.for_native_client(client_root=root)
+        record = await asyncio.to_thread(storage.load_device, hardware.pc_uuid)
+        if record is None:
+            raise NativeIdentityError(
+                "getDeviceId has no valid native cache for this hardware; "
+                "automatic registration and local-ID fallback are disabled for check-in")
+        service = NativeAhaDeviceService(hardware_uuid=hardware.pc_uuid, record=record,
+                                        local_device_id=hardware.local_device_id)
+        try:
+            await service.start(allow_network=False)
+            device_id = await service.get_device_id()
+            if device_id in ("", "0") or device_id == service.local_device_id:
+                raise NativeIdentityError("getDeviceId did not return a remote device ID")
+            return device_id
+        finally:
+            await service.close()
+
+    return asyncio.run(resolve())
+
+
 @dataclass(frozen=True)
 class NativeIdentity:
     user_data: Path
@@ -36,9 +68,13 @@ class NativeIdentity:
     device_id: str = field(repr=False)
     session: str
     user_region: str
+    device_id_source: DeviceIdSource = "existing"
 
     @classmethod
-    def load(cls, directory: Path | None = None) -> "NativeIdentity":
+    def load(cls, directory: Path | None = None, *,
+             device_id_source: DeviceIdSource = "existing") -> "NativeIdentity":
+        if device_id_source not in ("existing", "get-device-id"):
+            raise NativeIdentityError("unsupported native device ID source")
         root = directory if directory is not None else native_user_data()
         try:
             raw = json.loads((root / "User/globalStorage/storage.json").read_text(encoding="utf-8"))
@@ -73,20 +109,22 @@ class NativeIdentity:
         except OSError:
             raise NativeIdentityError("cannot read the latest native session log; start Trae CN first") from None
 
-        resolved = list(re.finditer(r"\[ICDRS\] \(init\) resolve rdid:\s*([^\s,]+)", text))
-        initialized = list(re.finditer(
-            r"\[ICDRS\] \(init\) initialization done, did:\s*([^\s,]+), ldid:\s*([^\s,]+), rdid:\s*([^\s,]+)", text)
-        )
-        if not resolved or not initialized:
-            raise NativeIdentityError("latest native session has no completed remote device resolution")
-        initialized_id, local_id, remote_id = initialized[-1].groups()
-        device_id = resolved[-1][1]
-        # The native promise may resolve after initialization timed out. That
-        # callback updates both live IDs, so the later resolution is decisive.
-        initialized_after_resolution = initialized[-1].start() > resolved[-1].start()
-        if (device_id in ("", "0") or device_id == local_id
-                or (initialized_after_resolution and (initialized_id != device_id or remote_id != device_id))):
-            raise NativeIdentityError("native session device evidence is inconsistent or uses a local fallback")
+        if device_id_source == "get-device-id":
+            device_id = _implemented_device_id(root)
+        else:
+            resolved = list(re.finditer(r"\[ICDRS\] \(init\) resolve rdid:\s*([^\s,]+)", text))
+            initialized = list(re.finditer(
+                r"\[ICDRS\] \(init\) initialization done, did:\s*([^\s,]+), ldid:\s*([^\s,]+), rdid:\s*([^\s,]+)", text)
+            )
+            if not resolved or not initialized:
+                raise NativeIdentityError("latest native session has no completed remote device resolution")
+            initialized_id, local_id, remote_id = initialized[-1].groups()
+            device_id = resolved[-1][1]
+            # A late resolution after initialization updates both live IDs.
+            initialized_after_resolution = initialized[-1].start() > resolved[-1].start()
+            if (device_id in ("", "0") or device_id == local_id
+                    or (initialized_after_resolution and (initialized_id != device_id or remote_id != device_id))):
+                raise NativeIdentityError("native session device evidence is inconsistent or uses a local fallback")
         if "iCubeAuthInfo://icube-dc:" + device_id not in raw:
             raise NativeIdentityError("native remote device ID does not match a native OAuth device record")
 
@@ -98,9 +136,9 @@ class NativeIdentity:
         # independent proxy credential's AIRegion for a native store region.
         if not regions:
             raise NativeIdentityError("native store region unavailable in the latest session log")
-        return cls(root, user_id, token, device_id, sessions[0].name, regions[-1])
+        return cls(root, user_id, token, device_id, sessions[0].name, regions[-1], device_id_source)
 
     def ensure_current(self) -> None:
-        current = type(self).load(self.user_data)
+        current = type(self).load(self.user_data, device_id_source=self.device_id_source)
         if current != self:
             raise NativeIdentityError("native login, device, region or session changed; rerun the command")
