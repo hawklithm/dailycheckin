@@ -5,6 +5,12 @@ import json
 import httpx
 import pytest
 
+@pytest.fixture(autouse=True)
+def existing_device_pair(monkeypatch):
+    """These protocol tests exercise an already-resolved device; pairing has its own tests."""
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair", lambda user_id, device_id, client, version: (device_id, None))
+
+
 from trae2api.checkin import Account, CheckinError, checkin, main
 from trae2api.native_identity import NativeIdentity, NativeIdentityError
 
@@ -44,7 +50,7 @@ def implemented_native(native, monkeypatch):
     root, storage, log = native
     hardware = Hardware("33221100-5544-7766-8899-AABBCCDDEEFF", "test-disk", "Test Model",
                         "Test Brand", "Test CPU", "windows", "Windows Test", "10.0.19045")
-    monkeypatch.setattr(Hardware, "read_native", classmethod(lambda cls: hardware))
+    monkeypatch.setattr(Hardware, "read_real", classmethod(lambda cls: hardware))
     cache = NativeTinyStorage.for_native_client(client_root=root, writable=True)
     cache.save_device(DeviceRecord("123456789", "987654321", hardware.pc_uuid))
     raw = json.loads(storage.read_text())
@@ -199,7 +205,7 @@ def test_get_device_id_source_calls_our_getter_and_preserves_native_files(implem
         return httpx.Response(200, json={"enable": True, "checked_in": False})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         checkin(account, client, status_only=True)
-    assert len(calls) == 2  # Initial selection and request-time revalidation.
+    assert len(calls) == 3  # Selection, pre-registration validation, and request-time revalidation.
     assert all(service.backend is None for service in calls)
     assert seen[0].headers["x-device-id"] == "123456789"
     assert seen[0].headers["authorization"] == "Cloud-IDE-JWT native-test-token"

@@ -1,4 +1,5 @@
 # secrets & credentials
+/.traeapi/
 trae2api/trae2api.json
 *.token
 *.secret

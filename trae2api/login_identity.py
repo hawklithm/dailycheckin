@@ -130,3 +130,5 @@ class IdentityStore:
 
     def save(self, identity: LoginIdentity) -> None:
         atomic_json(self.path, identity.as_dict())
+        from .app_storage import save_tiny_storage
+        save_tiny_storage(identity)

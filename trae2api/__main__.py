@@ -3,6 +3,11 @@ import sys
 
 
 def main() -> None:
+    from .app_storage import root
+    try:
+        root()
+    except OSError as exc:
+        sys.exit(f"Cannot initialize trae2api storage: {exc}. Set TRAE2API_HOME to a writable directory.\n")
     parser = argparse.ArgumentParser(prog="trae2api")
     parser.add_argument("command", nargs="?", default="serve", choices=["serve", "login"],
                         help="serve: start the OpenAI-compatible proxy (default); "

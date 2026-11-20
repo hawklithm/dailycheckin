@@ -39,7 +39,7 @@ def _implemented_device_id(root: Path) -> str:
     from .device_hardware import Hardware
 
     async def resolve():
-        hardware = await asyncio.to_thread(Hardware.read_native)
+        hardware = await asyncio.to_thread(Hardware.read_real)
         storage = NativeTinyStorage.for_native_client(client_root=root)
         record = await asyncio.to_thread(storage.load_device, hardware.pc_uuid)
         if record is None:

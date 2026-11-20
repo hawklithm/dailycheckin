@@ -7,6 +7,12 @@ import types
 import httpx
 import pytest
 
+@pytest.fixture(autouse=True)
+def existing_device_pair(monkeypatch):
+    """These protocol tests exercise an already-resolved device; pairing has its own tests."""
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair", lambda user_id, device_id, client, version: (device_id, None))
+
+
 from trae2api import client_metadata
 from trae2api.checkin import Account, checkin, main
 from trae2api.checkin_profile import CheckinProfile, _read_jsonc, validate_base_url

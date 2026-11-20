@@ -1,10 +1,13 @@
-"""Read the real Windows device fields needed by standalone registration."""
+"""Sample Windows hardware once and derive per-call registration metadata."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import ctypes
 import json
 import platform
+import secrets
+import string
+import threading
 import struct
 import subprocess
 import uuid
@@ -261,6 +264,37 @@ def _adapter_mac_address() -> str:
     return ""
 
 
+_baseline_lock = threading.Lock()
+_baseline: "Hardware | None" = None
+
+
+def _drift_serial(value: str) -> str:
+    # Keep length, punctuation and character classes, changing up to six
+    # trailing alphanumeric characters. Missing values remain missing.
+    chars = list(value)
+    positions = [i for i, char in enumerate(chars) if char in string.ascii_letters + string.digits][-6:]
+    for i in positions:
+        alphabet = (string.digits if chars[i] in string.digits else
+                    string.ascii_uppercase if chars[i] in string.ascii_uppercase else string.ascii_lowercase)
+        options = alphabet.replace(chars[i], "")
+        chars[i] = secrets.choice(options)
+    return "".join(chars)
+
+
+def _drift_mac(value: str) -> str:
+    # Preserve the textual form where possible and mark the address locally
+    # administered and unicast. Unrecognized or absent values are left intact.
+    separator = "-" if "-" in value else ":"
+    parts = value.split(separator)
+    if len(parts) != 6 or any(len(part) != 2 or any(c not in string.hexdigits for c in part) for part in parts):
+        return value
+    address = [int(part, 16) for part in parts]
+    address[0] = (address[0] | 2) & 0xFE
+    # Each trailing byte changes from its baseline value.
+    address[3:] = [(byte + 1 + secrets.randbelow(255)) % 256 for byte in address[3:]]
+    return separator.join(f"{byte:02X}" for byte in address)
+
+
 @dataclass(frozen=True)
 class Hardware:
     pc_uuid: str = field(repr=False)
@@ -275,16 +309,69 @@ class Hardware:
     local_device_id: str | None = field(default=None, repr=False)
 
     @classmethod
-    def read(cls) -> "Hardware":
-        result = cls.read_native()
+    def read(cls, user_id: str | None = None) -> "Hardware":
+        result = cls.read_native(user_id) if user_id is not None else cls.read_native()
         if not result.pc_uuid:
             raise ValueError("cannot read a hardware UUID from SMBIOS or WMI")
         return result
 
     @classmethod
-    def read_native(cls) -> "Hardware":
-        name, version = os_metadata()
-        registration_uuid, local_uuid = device_uuids()
-        return cls(registration_uuid, disk_serial(), device_model(), manufacturer(), cpu_brand(),
-                   name, version, platform.version() if name == "windows" else platform.release(),
-                   mac_address(), local_uuid)
+    def for_account(cls, user_id: str) -> "Hardware":
+        """Return the persisted device profile for an account, creating it once."""
+        if not isinstance(user_id, str) or not user_id:
+            raise ValueError("account ID is required for hardware profile")
+        from .app_storage import _locked, root
+        from .login_identity import atomic_json
+        path = root() / "device_hardware.json"
+        with _locked():
+            if path.exists():
+                profiles = json.loads(path.read_text(encoding="utf-8-sig"))
+                if not isinstance(profiles, dict):
+                    raise ValueError("invalid device_hardware.json; refusing to overwrite it")
+            else:
+                profiles = {}
+            if user_id in profiles:
+                try:
+                    values = profiles[user_id]
+                    if not isinstance(values, dict) or set(values) != set(cls.__dataclass_fields__):
+                        raise ValueError()
+                    if any(not isinstance(value, str) for key, value in values.items()
+                           if key != "local_device_id"):
+                        raise ValueError()
+                    if values["local_device_id"] is not None and not isinstance(values["local_device_id"], str):
+                        raise ValueError()
+                    result = cls(**values)
+                except (TypeError, ValueError):
+                    raise ValueError("invalid account hardware profile; refusing to overwrite it") from None
+            else:
+                baseline = cls.read_real()
+                if not baseline.pc_uuid:
+                    raise ValueError("cannot read a hardware UUID from SMBIOS or WMI")
+                new_uuid = str(uuid.uuid4()).upper()
+                local_uuid = (new_uuid if baseline.local_device_id == baseline.pc_uuid else
+                              str(uuid.uuid4()).upper() if baseline.local_device_id else baseline.local_device_id)
+                result = replace(baseline, pc_uuid=new_uuid, local_device_id=local_uuid,
+                                 pc_serial=_drift_serial(baseline.pc_serial), mac=_drift_mac(baseline.mac))
+                profiles[user_id] = asdict(result)
+                atomic_json(path, profiles)
+        from .debuglog import get_logger
+        get_logger().info(json.dumps({"kind": "account_hardware", "user_id": user_id, **asdict(result)}, ensure_ascii=False))
+        return result
+
+    @classmethod
+    def read_native(cls, user_id: str | None = None) -> "Hardware":
+        """Use the account profile, or the real hardware when no account is known."""
+        return cls.for_account(user_id) if user_id is not None else cls.read_real()
+
+    @classmethod
+    def read_real(cls) -> "Hardware":
+        """Return the unmodified hardware snapshot used to validate native cache."""
+        global _baseline
+        with _baseline_lock:
+            if _baseline is None:
+                name, version = os_metadata()
+                registration_uuid, local_uuid = device_uuids()
+                _baseline = cls(registration_uuid, disk_serial(), device_model(), manufacturer(), cpu_brand(),
+                                name, version, platform.version() if name == "windows" else platform.release(),
+                                mac_address(), local_uuid)
+            return _baseline

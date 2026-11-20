@@ -56,6 +56,11 @@ python -m trae2api                # 0.0.0.0:8080
 
 登录成功后代理优先使用 `trae2api.json`；删除该文件即回到方式 B。
 独立登录在凭据旁保存 `.device.secret` 设备配置，重复登录会复用注册 ID 和密钥。
+默认在启动时创建 `~/.traeapi`；如用户目录无创建权限，会依次尝试 Python 所在的同名 Windows 用户目录和项目目录下的 `.traeapi`，并提示实际位置。也可通过 `TRAE2API_HOME` 指定完整存储目录（例如 PowerShell 中 `$env:TRAE2API_HOME="D:\traeapi-data"`）；切换目录不会自动迁移已有数据。已注册的独立设备缓存保存在 `~/.traeapi/<deviceId>/TinyStorage`。
+签到或查询签到状态时，以凭据中的 `auth.userId` 为账号标识，`~/.traeapi/device_pair.json` 保存账号 ID 到设备 ID 的映射，不保存 token。账号没有映射时会先联网注册并激活一个新设备，保存其 TinyStorage 和映射后再发送签到请求；已有映射时以当前凭据选中的设备更新该账号的映射。注册或激活失败不会建立映射。凭据缺少 `userId` 时无法记录绑定，签到会报错。原生客户端的凭据和缓存仍保持只读。
+首次注册的设备与现有登录 token 的组合尚未完成真实签到验收。
+
+设备硬件信息在进程首次读取时采集一次。签到按 `auth.userId` 在 `~/.traeapi/device_hardware.json` 中查找设备快照；首次使用的账号会生成独立 UUID、漂移后的磁盘序列号和 MAC，并保存完整设备信息，之后直接复用，包括型号和系统版本。调用方可使用 `Hardware.read_native(user_id)` 获取账号快照；不提供账号的设备读取使用进程内缓存的真实设备信息，以兼容原生设备缓存，不会生成漂移结果。设备信息写入控制台和 `logs/debug-<日期>.log`，其中包含账号与设备标识，请注意日志的访问权限和分享范围。
 设备注册/激活已经实测成功；新版独立浏览器授权、换 token 和签到仍待真实验收，详见
 [独立登录实现与证据](docs/INDEPENDENT_LOGIN_2026-11-20.md)。
 

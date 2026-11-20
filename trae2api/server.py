@@ -34,6 +34,8 @@ catalog: Optional[ModelCatalog] = None
 @app.on_event("startup")
 async def _startup() -> None:
     global gateway, catalog
+    from .app_storage import root
+    root()
     creds = auth.load()
     base = os.environ.get("TRAE2API_GATEWAY", "") or None
     impersonate = os.environ.get("TRAE2API_TLS_IMPERSONATE", "chrome124").strip()

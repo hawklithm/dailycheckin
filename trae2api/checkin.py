@@ -43,6 +43,7 @@ class Account:
     base_url: str = BASE_URL
     session_headers: tuple[tuple[str, str], ...] = field(default=(), repr=False)
     native_identity: NativeIdentity | None = field(default=None, repr=False)
+    user_id: str = field(default="", repr=False)
 
     @classmethod
     def from_native(cls, *, device_id_source: DeviceIdSource = "existing") -> "Account":
@@ -58,7 +59,7 @@ class Account:
                    app_version=client_version("3.4.20"), editor_version=profile.editor_version,
                    client_name=profile.client_name, user_region=identity.user_region,
                    base_url=profile.base_url, session_headers=profile.headers,
-                   native_identity=identity)
+                   native_identity=identity, user_id=identity.user_id)
 
     @classmethod
     def from_file(cls, path: str | Path) -> "Account":
@@ -88,7 +89,8 @@ class Account:
                    device_type=os_name, os_version=os_version,
                    app_version=client_version(device.get("clientVersion") or "3.4.20"),
                    editor_version=profile.editor_version, client_name=profile.client_name,
-                   user_region="CN", base_url=profile.base_url, session_headers=profile.headers)
+                   user_region="CN", base_url=profile.base_url, session_headers=profile.headers,
+                   user_id=str(auth.get("userId") or ""))
 
     def headers(self) -> dict[str, str]:
         result = {"Authorization": f"Cloud-IDE-JWT {self.token}",
@@ -175,6 +177,17 @@ def _read_status(account: Account, client: httpx.Client) -> dict[str, Any]:
 
 def checkin(account: Account, client: httpx.Client, *, status_only: bool = False) -> dict[str, Any]:
     """Query, claim once if eligible, then verify status without retrying claim."""
+    if account.native_identity is not None:
+        try:
+            account.native_identity.ensure_current()
+        except NativeIdentityError as exc:
+            raise CheckinError(str(exc)) from None
+    from .app_storage import resolve_pair
+    device_id, hardware = resolve_pair(account.user_id, account.device_id, client, account.app_version)
+    account = replace(account, device_id=device_id)
+    if hardware is not None:
+        account = replace(account, device_brand=clean_model(hardware.model),
+                          device_type=hardware.os_name, os_version=hardware.os_version)
     status = _read_status(account, client)
     if status_only:
         return {"action": "status", **status}
@@ -224,6 +237,8 @@ def main(argv: list[str] | None = None) -> int:
         print("Dry run: no credentials read and no requests sent. Add --execute or --status-only to run.")
         return 0
     try:
+        from .app_storage import root
+        root()
         account = (Account.from_native(device_id_source=args.device_id_source or "existing")
                    if args.native else Account.from_file(args.creds))
         if args.base_url:
