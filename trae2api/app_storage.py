@@ -130,7 +130,7 @@ def _read_pairs(path: Path) -> dict[str, str]:
 
 
 def resolve_pair(user_id: str, device_id: str, client, version: str):
-    """Register on first use; otherwise record the currently selected device."""
+    """Reuse the account binding, registering a device only on first use."""
     from .login_identity import atomic_json
     if not isinstance(user_id, str) or not user_id:
         raise ValueError('check-in credentials must contain auth.userId')
@@ -158,6 +158,9 @@ def resolve_pair(user_id: str, device_id: str, client, version: str):
             cache.setdefault('tiny_storage_data', {})['aha.device.device_id'] = (
                 DeviceRecord(device_id, registration.install_id, hardware.pc_uuid).encoded())
             atomic_json(cache_path, cache)
-        data[user_id] = device_id
-        atomic_json(path, data)
+            data[user_id] = device_id
+            atomic_json(path, data)
+        else:
+            device_id = data[user_id]
+            device_path(device_id)
     return device_id, hardware

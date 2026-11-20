@@ -28,7 +28,7 @@ def test_registered_devices_get_separate_native_compatible_storage(tmp_path):
     assert (tmp_path / '.traeapi' / '123' / 'TinyStorage').exists()
 
 
-def test_first_checkin_registers_then_replaces_binding(tmp_path, monkeypatch):
+def test_first_checkin_registers_then_reuses_binding(tmp_path, monkeypatch):
     from trae2api.aha_registration import Registration
     from trae2api.device_hardware import Hardware
     hardware = Hardware('hardware', '', '', '', '', 'windows', '', '', '')
@@ -50,9 +50,9 @@ def test_first_checkin_registers_then_replaces_binding(tmp_path, monkeypatch):
         pairs_file.write_text(json.dumps({'account': '123', 'other': '456'}), encoding='utf-8')
         checkin(Account('token', '789', user_id='account'), client, status_only=True)
     assert calls == ['register', 'activate']
-    assert requests == ['123', '789']
+    assert requests == ['123', '123']
     pairs = json.loads((tmp_path / '.traeapi' / 'device_pair.json').read_text(encoding='utf-8'))
-    assert pairs == {'account': '789', 'other': '456'}
+    assert pairs == {'account': '123', 'other': '456'}
 
 
 def test_registration_failure_does_not_bind(tmp_path, monkeypatch):

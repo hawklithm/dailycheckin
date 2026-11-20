@@ -122,3 +122,51 @@ def test_account_profile_used_for_registration_and_request(baseline, tmp_path, m
     assert requests[0].headers['x-device-brand'] == profile.model
     assert requests[0].headers['x-os-version'] == profile.os_version
     assert NativeTinyStorage(storage / '123' / 'TinyStorage').load_device(profile.pc_uuid).device_id == '123'
+
+
+@pytest.mark.parametrize('mode,expected_paths', [
+    ('--status-only', ['/trae/api/v2/ug/checkin_credits/status']),
+    ('--execute', ['/trae/api/v2/ug/checkin_credits/status',
+                   '/trae/api/v2/ug/checkin_credits/claim',
+                   '/trae/api/v2/ug/checkin_credits/status']),
+])
+def test_cli_modes_share_persisted_device_for_all_requests(baseline, tmp_path, monkeypatch, mode, expected_paths):
+    import httpx
+    from types import SimpleNamespace
+    from trae2api import app_storage
+    from trae2api.aha_registration import Registration
+    from trae2api.checkin import main
+    from trae2api.native_identity import NativeIdentity
+
+    storage = tmp_path / '.traeapi'
+    storage.mkdir()
+    monkeypatch.setattr(app_storage, 'root', lambda: storage)
+    class Logger:
+        def info(self, line):
+            pass
+    monkeypatch.setattr(debuglog, 'get_logger', lambda: Logger())
+    native = SimpleNamespace(user_id='user', token='token', device_id='original', user_region='CN',
+                             ensure_current=lambda: None)
+    monkeypatch.setattr(NativeIdentity, 'load', classmethod(lambda cls, **kwargs: native))
+    registered, activated = [], []
+    monkeypatch.setattr('trae2api.aha_registration.register',
+                        lambda client, hardware, version: registered.append(hardware) or Registration('123', '456', 'CN'))
+    monkeypatch.setattr('trae2api.aha_registration.activate',
+                        lambda client, registration, hardware, version: activated.append(hardware))
+    requests = []
+    def reply(request):
+        requests.append(request)
+        path = request.url.path
+        if path.endswith('/claim'):
+            return httpx.Response(200, json={'code': 0})
+        return httpx.Response(200, json={'enable': True, 'checked_in': len(requests) > 1})
+    client = httpx.Client(transport=httpx.MockTransport(reply))
+    monkeypatch.setattr('trae2api.checkin.httpx.Client', lambda **kwargs: client)
+    assert main(['--native', '--device-id-source', 'get-device-id', mode]) == 0
+    profile = hw.Hardware.for_account('user')
+    assert registered == activated == [profile]
+    assert [request.url.path for request in requests] == expected_paths
+    assert all(request.headers['x-device-id'] == '123' for request in requests)
+    assert all(request.headers['x-device-brand'] == profile.model for request in requests)
+    assert all(request.headers['x-os-version'] == profile.os_version for request in requests)
+    assert json.loads((storage / 'device_pair.json').read_text(encoding='utf-8')) == {'user': '123'}
