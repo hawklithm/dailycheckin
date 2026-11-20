@@ -171,8 +171,11 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
     status = _read_status(account, client)
     if status_only:
         return {"action": "status", **status}
-    if status["checked_in"] or status.get("did_checked_in") is True:
+    if status["checked_in"]:
         return {"action": "already_checked_in", "credits": status.get("credits")}
+    if status.get("did_checked_in") is True:
+        return {"action": "device_already_checked_in", "credits": status.get("credits"),
+                "status": status}
     if not status["enable"]:
         return {"action": "disabled", "credits": status.get("credits")}
     try:
@@ -187,7 +190,7 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
         result["verification_error"] = str(exc)
         return result
     result["status"] = after
-    if after["checked_in"] or after.get("did_checked_in") is True:
+    if after["checked_in"]:
         result.update(action="checked_in", verified=True)
     return result
 

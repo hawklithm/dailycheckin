@@ -45,8 +45,8 @@ from cryptography.hazmat.primitives import serialization
 from .auth import DEFAULT_CLIENT_ID, TraeAuth
 from .client_metadata import client_version, device_model, installed_client, os_metadata
 from .device_hardware import Hardware, manufacturer, cpu_brand
-from .login_identity import IdentityStore, new_key
-from .aha_registration import register, activate, Registration
+from .login_identity import IdentityStore
+from .aha_device_service import AhaDeviceService
 
 CONSOLE_HOST = os.environ.get("TRAE2API_CONSOLE_HOST", "https://www.trae.cn")
 API_HOST = os.environ.get("TRAE2API_API_HOST", "https://api.trae.cn")
@@ -103,25 +103,10 @@ class TraeLoginFlow:
 
     def prepare_device(self) -> None:
         """Register once, resume activation if needed, and reuse the same key."""
-        hardware = Hardware.read()
-        with self.identity_store.locked():
-            identity = self.identity_store.load()
-            if identity.registered and identity.hardware_uuid != hardware.pc_uuid:
-                raise ValueError("independent profile belongs to different hardware; choose another --creds path")
-            if not identity.registered:
-                result = register(self.http, hardware, self.client_version)
-                if identity.device_id != result.device_id:
-                    identity.private_key_pem = new_key()
-                identity.device_id, identity.install_id = result.device_id, result.install_id
-                identity.hardware_uuid, identity.region = hardware.pc_uuid, result.region
-                identity.registered, identity.activated = True, False
-                self.identity_store.save(identity)
-            if not identity.activated:
-                activate(self.http, Registration(identity.device_id, identity.install_id, identity.region),
-                         hardware, self.client_version)
-                identity.activated = True
-                self.identity_store.save(identity)
-            self.identity = identity
+        result = AhaDeviceService(self.identity_store, http=self.http, version=self.client_version).get_device_id(
+            allow_network=True, require_activation=True)
+        identity, hardware = result.identity, result.hardware
+        self.identity = identity
         self.device_id, self.machine_id = identity.device_id, identity.machine_id
         self.private_key_pem, self.public_key_pem = identity.private_key_pem, identity.public_key_pem
         self.device_model, self.device_brand, self.device_cpu = hardware.model, hardware.brand, hardware.cpu

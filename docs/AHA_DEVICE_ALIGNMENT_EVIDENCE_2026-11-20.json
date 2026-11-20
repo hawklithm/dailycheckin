@@ -1,0 +1,60 @@
+{
+  "kind": "static_evidence_and_offline_validation",
+  "date": "2026-11-20",
+  "image_sha256": "eac5743ab3eafa528ae766a11a814cd0d8ea1c54cb948c66027e71479fe00ede",
+  "main_js_sha256": "433e32bd7821ab4b05e46be1fc1b74043315884ba3ec58c45c99d94f58fd6816",
+  "native_code_executed": false,
+  "live_service_calls": false,
+  "sections": [
+    {
+      "name": "mac_cache_read_type",
+      "artifact": "logs\\aha-static-20261120\\function-02846a70.asm",
+      "range_start": "0x2846e8d",
+      "range_end": "0x2846ea8",
+      "excerpt": "02846e8d: call     0x147785150 ; target RVA 0x7785150\n02846e92: mov      ecx, dword ptr [rbx]\n02846e94: xor      ecx, 3\n02846e97: or       ecx, eax\n02846e99: sete     cl\n02846e9c: mov      eax, dword ptr [rsi]\n02846e9e: test     eax, eax\n02846ea0: setne    dl\n02846ea3: and      dl, cl\n02846ea5: cmp      dl, 1\n02846ea8: je       0x142846f35"
+    },
+    {
+      "name": "mac_cache_write_type",
+      "artifact": "logs\\aha-static-20261120\\function-02846a70.asm",
+      "range_start": "0x28476e3",
+      "range_end": "0x2847713",
+      "excerpt": "028476e3: movzx    eax, byte ptr [rsi - 1]\n028476e7: mov      r9d, eax\n028476ea: shr      r9d, 1\n028476ed: test     al, 1\n028476ef: cmovne   r9d, dword ptr [rsi + 7]\n028476f4: mov      r8, qword ptr [rsi + 0xf]\n028476f8: cmove    r8, rsi\n028476fc: mov      dword ptr [rsp + 0x20], 3\n02847704: lea      rdx, [rip + 0x953b1fd] ; RIP->0xbd82908\n0284770b: lea      rcx, [rsp + 0x180]\n02847713: call     0x1477853d0 ; target RVA 0x77853d0"
+    },
+    {
+      "name": "disk_count_cap",
+      "artifact": "logs\\aha-parity-20261120\\function-01d3ba20.asm",
+      "range_start": "0x1d3baa7",
+      "range_end": "0x1d3bac6",
+      "excerpt": "01d3baa7: call     0x142341210 ; target RVA 0x2341210\n01d3baac: mov      eax, dword ptr [rbx]\n01d3baae: test     eax, eax\n01d3bab0: je       0x141d3bb84\n01d3bab6: cmp      eax, 0xb\n01d3bab9: jb       0x141d3bac6\n01d3babb: mov      dword ptr [rsp + 0x1bc], 0xa\n01d3bac6: xor      ecx, ecx"
+    },
+    {
+      "name": "os_disk_ioctl",
+      "artifact": "logs\\aha-parity-20261120\\function-01d3bf20.asm",
+      "range_start": "0x1d3c234",
+      "range_end": "0x1d3c278",
+      "excerpt": "01d3c236: mov      qword ptr [rsp + 0x38], 0\n01d3c23f: mov      dword ptr [rsp + 0x28], 0x20\n01d3c247: mov      rcx, rdi\n01d3c24a: mov      edx, 0x560000\n01d3c24f: xor      r8d, r8d\n01d3c252: xor      r9d, r9d\n01d3c255: call     qword ptr [rip + 0xa82aac5] ; RIP->0xc566d20\n01d3c25b: mov      esi, eax\n01d3c25d: call     qword ptr [rip + 0xa82ad65] ; RIP->0xc566fc8\n01d3c263: mov      ebx, eax\n01d3c265: test     esi, esi\n01d3c267: sete     al\n01d3c26a: cmp      ebx, 0xea\n01d3c270: setne    cl\n01d3c273: and      cl, al\n01d3c275: cmp      cl, 1\n01d3c278: je       0x141d3c286"
+    }
+  ],
+  "js_timeout": {
+    "milliseconds": 40000,
+    "character_offset": 1293807,
+    "excerpt": "d/vs/platform/iCubeDeviceRegister/common/iCubeDeviceRegister.js\"(){\"use strict\";Nt(),_e(),O$=4e4,om=\"0\",M$=ye(\"IIcubeDeviceRegisterService\"),so=M$}}),dce,uce,NLe=C({\"out-"
+  },
+  "offline_tests": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "284",
+    "time": "25.223",
+    "timestamp": "2026-11-20T14:02:56.485287",
+    "hostname": "DESKTOP-7FM16RH"
+  },
+  "implementation_sha256": {
+    "trae2api\\aha_device_service.py": "0a93a5e97da1fab6f6fbc641ddaad23bb0044823fa2550b7e9298a0974285197",
+    "trae2api\\aha_device_cache.py": "44380f7541e33d70d26eb87bbee5b078ba686c81951eaa14d2d5b4c92bbffe5d",
+    "trae2api\\device_hardware.py": "8e93304684de66f5efebd248a374e048fb38e3a307da76994167ecc507da5091",
+    "trae2api\\login_identity.py": "b21a0458f74af79fed7c0f0f24d716203f01f6e40d6bb5395f73e1b7d73aec48"
+  },
+  "exact_real_device_id_equality": "not_verified"
+}

@@ -192,7 +192,8 @@ def test_confirmation_does_not_finish_login_without_authcode(tmp_path, hardware)
                 response = browser.get(f"http://127.0.0.1:{port}/authorize", params={"authCodeInfo": "[]"})
                 assert response.status_code == 400 and not flow._done.is_set()
                 browser.get(f"http://127.0.0.1:{port}/authorize", params={"authCodeInfo": '{"AuthCode":"code"}'})
-                assert flow._done.is_set()
+                # The handler sends HTTP success before signalling completion.
+                assert flow._done.wait(timeout=5)
         finally:
             flow._server.shutdown()
             flow._server.server_close()

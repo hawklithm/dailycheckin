@@ -14,6 +14,7 @@ import httpx
 
 from .client_metadata import client_version
 from .device_hardware import Hardware
+from .aha_native_semantics import parse_uint64
 
 REGISTER_URL = "https://log.snssdk.com/service/2/desktop/device_register/"
 ACTIVE_URL = "https://log.snssdk.com/service/2/app_alert_check/"
@@ -26,14 +27,17 @@ class Registration:
     region: str
 
 
-def registration_request(hardware: Hardware, version: str, now: float | None = None) -> tuple[dict, bytes]:
+def registration_request(hardware: Hardware, version: str, now: float | None = None, *,
+                         device_id: str = "0", install_id: str = "0") -> tuple[dict, bytes]:
     language = "zh-CN"  # Reviewed CN desktop initialization config.
     # Windows native config: appId=787976, package=com.trae.app, channel=stable.
     query = {"aid": "787976", "channel": "stable", "os": "Windows",
              "os_version": hardware.os_release, "device_platform": "PC",
              "version_code": version, "pc_uuid": hardware.pc_uuid, "pc_serial": hardware.pc_serial}
     offset = -(time.altzone if time.daylight and time.localtime().tm_isdst else time.timezone)
-    header = {"device_id": 0, "install_id": 0, "aid": 787976, "os": "Windows",
+    # Native converts the uint64 parser's output to double before Dict.Set.
+    header = {"device_id": float(parse_uint64(device_id).value),
+              "install_id": float(parse_uint64(install_id).value), "aid": 787976.0, "os": "Windows",
               "device_platform": "PC", "mc": hardware.mac, "channel": "stable", "package": "com.trae.app",
               "language": language, "app_version": version, "os_version": hardware.os_release,
               "device_model": hardware.model, "time_zone": int(offset / 3600),
@@ -46,7 +50,7 @@ def registration_request(hardware: Hardware, version: str, now: float | None = N
     # default compression and memLevel=9. The HTTP transport must declare gzip;
     # live standalone validation returned zero IDs without Content-Encoding.
     compressor = zlib.compressobj(-1, zlib.DEFLATED, 31, 9, zlib.Z_DEFAULT_STRATEGY)
-    raw = json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    raw = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return query, compressor.compress(raw) + compressor.flush()
 
 
@@ -62,7 +66,8 @@ def _response(response: httpx.Response, stage: str) -> dict:
     return body
 
 
-def register(client: httpx.Client, hardware: Hardware, version: str | None = None) -> Registration:
+def register(client: httpx.Client, hardware: Hardware, version: str | None = None,
+             *, strict_ids: bool = True) -> Registration:
     version = version or client_version("3.4.20")
     query, body = registration_request(hardware, version)
     try:
@@ -72,15 +77,18 @@ def register(client: httpx.Client, hardware: Hardware, version: str | None = Non
         raise ValueError(f"device registration network error ({type(exc).__name__}); not retried") from None
     result = _response(response, "registration")
     device_id, install_id = result.get("device_id_str"), result.get("install_id_str")
-    if any(not isinstance(value, str) or not value.isdecimal() or int(value) <= 0
-           for value in (device_id, install_id)):
+    invalid = any(not isinstance(value, str) for value in (device_id, install_id))
+    if not invalid:
+        invalid = (any(not value.isascii() or not value.isdecimal() or int(value) <= 0
+                       for value in (device_id, install_id)) if strict_ids else device_id in ("", "0"))
+    if invalid:
         states = []
         for key in ("device_id", "install_id"):
             value = result.get(key)
             states.append(f"{key}=" + ("zero" if value == 0 else "present" if value is not None else "missing"))
         raise ValueError("device registration did not return valid device_id_str/install_id_str (" + ", ".join(states) + ")")
     region = response.headers.get("x-tt-store-region", "CN").upper()
-    if region not in ("CN", "SG", "US", "USTTP"):
+    if strict_ids and region not in ("CN", "SG", "US", "USTTP"):
         raise ValueError("device registration returned an unsupported store region")
     return Registration(device_id, install_id, region)
 

@@ -1,0 +1,17 @@
+{
+  "kind": "read_only_native_cache_comparison",
+  "client_started": false,
+  "live_service_calls": false,
+  "credential_files_opened": false,
+  "cache_present": true,
+  "original_instruction_plaintext_equals_python": true,
+  "cache_format_version_matches": true,
+  "cache_uuid_matches_current_hardware": true,
+  "native_numeric_predicate_accepts_cached_id": true,
+  "python_getter_equals_original_cached_id": true,
+  "public_facade_resolver_equals_original_cached_id": true,
+  "public_facade_all_ids_equal_original_cached_id": true,
+  "original_cache_unchanged": true,
+  "hardware_cache_write_attempts_suppressed": 0,
+  "real_device_identifiers_in_report": false
+}

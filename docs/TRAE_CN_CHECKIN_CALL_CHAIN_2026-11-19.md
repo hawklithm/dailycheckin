@@ -1,5 +1,9 @@
 # Windows Trae CN 3.4.20 签到调用链复核
 
+> 2026-11-20 已从原生界面 tooltip 确认 `checked_in` 的账号语义及
+> `did_checked_in=true, checked_in=false` 的设备限制语义，见
+> [字段复核与修正](TRAE_CN_CHECKIN_FIELD_SEMANTICS_2026-11-20.md)。
+
 > 2026-11-20 已实施后续 UA、OS 和 session 请求头参数对齐，见
 > [对齐记录](TRAE_CN_CHECKIN_ALIGNMENT_2026-11-20.md)。下方差异表保留 11 月 19 日分析基线；
 > 不应用其中“缺少 UA/地区头”等描述判断最新代码。设备注册和网络层验收仍未完成。

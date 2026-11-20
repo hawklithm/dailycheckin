@@ -1,5 +1,9 @@
 # Trae CN 签到客户端差异修复记录
 
+> 2026-11-20 已进一步区分账号签到与设备限制，并将领取后 `verified=true` 的条件收紧为
+> 账号 `checked_in=true`。下方为历史记录；当前语义见
+> [字段复核与修正](TRAE_CN_CHECKIN_FIELD_SEMANTICS_2026-11-20.md)。
+
 > 2026-11-20 已继续补齐 UA、OS 及 session header，最新实现与边界见
 > [对齐记录](TRAE_CN_CHECKIN_ALIGNMENT_2026-11-20.md)。本文件保留上一轮修复快照。
 

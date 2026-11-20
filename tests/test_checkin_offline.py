@@ -70,7 +70,8 @@ def test_rejection_identifies_stage(stage):
 @pytest.mark.parametrize("body,action", [
     ({"enable": True, "checked_in": True}, "already_checked_in"),
     ({"enable": False, "checked_in": False}, "disabled"),
-    ({"enable": True, "checked_in": False, "did_checked_in": True}, "already_checked_in"),
+    ({"enable": True, "checked_in": False, "did_checked_in": True}, "device_already_checked_in"),
+    ({"enable": True, "checked_in": True, "did_checked_in": False}, "already_checked_in"),
 ])
 def test_skip_claim(body, action):
     client, seen = run_with_replies([httpx.Response(200, json=body)])
@@ -135,6 +136,34 @@ def test_claim_accepted_but_not_confirmed_does_not_retry(reply):
         result = checkin(Account("token", "device"), client)
     assert result["action"] == "claim_accepted"
     assert result["verified"] is False
+    assert [r.url.path for r in seen] == [STATUS_PATH, CLAIM_PATH, STATUS_PATH]
+
+
+def test_device_limit_is_not_reported_as_account_checkin():
+    body = {"enable": True, "checked_in": False, "did_checked_in": True, "credits": 100}
+    client, seen = run_with_replies([httpx.Response(200, json=body)])
+    with client:
+        result = checkin(Account("token", "device"), client)
+    assert result == {"action": "device_already_checked_in", "credits": 100, "status": body}
+    assert [r.url.path for r in seen] == [STATUS_PATH]
+
+
+@pytest.mark.parametrize("checked_in,did_checked_in,verified", [
+    (False, True, False),
+    (True, False, True),
+    (True, True, True),
+])
+def test_confirmation_requires_account_checkin(checked_in, did_checked_in, verified):
+    client, seen = run_with_replies([
+        httpx.Response(200, json={"enable": True, "checked_in": False, "did_checked_in": False}),
+        httpx.Response(200, json={"code": 0}),
+        httpx.Response(200, json={"enable": True, "checked_in": checked_in,
+                                 "did_checked_in": did_checked_in}),
+    ])
+    with client:
+        result = checkin(Account("token", "device"), client)
+    assert result["verified"] is verified
+    assert result["action"] == ("checked_in" if verified else "claim_accepted")
     assert [r.url.path for r in seen] == [STATUS_PATH, CLAIM_PATH, STATUS_PATH]
 
 

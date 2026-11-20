@@ -1,0 +1,135 @@
+{
+  "kind": "static_pe_code_evidence",
+  "app_version": "3.4.20",
+  "image": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\Trae CN.exe",
+  "sha256": "eac5743ab3eafa528ae766a11a814cd0d8ea1c54cb948c66027e71479fe00ede",
+  "image_base": "0x140000000",
+  "address_unit": "RVA; no target code executed",
+  "sections": [
+    {
+      "name": "native_bridge",
+      "function_rva": "0x4c29f0",
+      "function_end_rva": "0x4c2b7f",
+      "range_start": "0x4c2a77",
+      "range_end": "0x4c2b21",
+      "excerpt": "004c2a77: call     0x142846810 ; target RVA 0x2846810\n004c2a7c: lea      rbx, [rsp + 0x20]\n004c2a81: mov      rcx, rax\n004c2a84: mov      rdx, rbx\n004c2a87: call     0x142849440 ; target RVA 0x2849440\n004c2a8c: test     byte ptr [rbx], 1\n004c2a8f: je       0x1404c2a9b\n004c2a91: mov      rcx, qword ptr [rsp + 0x30]\n004c2a96: call     0x1453c3f90 ; target RVA 0x53c3f90\n004c2a9b: call     0x142846810 ; target RVA 0x2846810\n004c2aa0: mov      rbx, rax\n004c2aa3: mov      ecx, 0x18\n004c2aa8: call     0x1453c3f04 ; target RVA 0x53c3f04\n004c2aad: mov      r14, rax\n004c2ab0: lea      rax, [rip + 0xa571948] ; RIP->0xaa343ff 'GetDeviceId'\n004c2ab7: mov      qword ptr [r14], rax\n004c2aba: lea      rax, [rip + 0xa571a52] ; RIP->0xaa34513 'DeviceService'\n004c2ac1: mov      qword ptr [r14 + 8], rax\n004c2ac5: lea      r15, [rsp + 0x60]\n004c2aca: mov      rcx, r15\n004c2acd: call     0x144d19d50 ; target RVA 0x4d19d50\n004c2ad2: mov      rax, qword ptr [r15]\n004c2ad5: mov      qword ptr [r14 + 0x10], rax\n004c2ad9: mov      ecx, 0x48\n004c2ade: call     0x1453c3f04 ; target RVA 0x53c3f04\n004c2ae3: mov      r12, rax\n004c2ae6: lea      rdx, [rip + 0xa3] ; RIP->0x4c2b90\n004c2aed: lea      r8, [rip + 0x42c] ; RIP->0x4c2f20\n004c2af4: mov      rcx, rax\n004c2af7: call     0x144d39930 ; target RVA 0x4d39930\n004c2afc: lea      rcx, [r12 + 0x28]\n004c2b01: lea      r13, [rsp + 0x40]\n004c2b06: mov      rdx, r13\n004c2b09: call     0x1403f9bb0 ; target RVA 0x3f9bb0\n004c2b0e: mov      qword ptr [r12 + 0x40], r14\n004c2b13: mov      qword ptr [r15], r12\n004c2b16: lea      r14, [rsp + 0x60]\n004c2b1b: mov      rcx, rbx\n004c2b1e: mov      rdx, r14\n004c2b21: call     0x14284a040 ; target RVA 0x284a040",
+      "raw_artifact": "logs/aha-static-20261120/detail/function-004c29f0.asm"
+    },
+    {
+      "name": "cache_fast_return",
+      "function_rva": "0x284a040",
+      "function_end_rva": "0x284a234",
+      "range_start": "0x284a066",
+      "range_end": "0x284a0ea",
+      "excerpt": "0284a066: movzx    eax, byte ptr [rcx + 0x10]\n0284a06a: test     al, 1\n0284a06c: je       0x14284a074\n0284a06e: mov      rax, qword ptr [rsi + 0x18]\n0284a072: jmp      0x14284a076 ; target RVA 0x284a076\n0284a074: shr      eax, 1\n0284a076: test     rax, rax\n0284a079: je       0x14284a1cb\n0284a07f: xor      ecx, ecx\n0284a081: call     0x144d38f30 ; target RVA 0x4d38f30\n0284a086: test     al, al\n0284a088: je       0x14284a0ea\n0284a08a: lea      rdx, [rip + 0x9537f7d] ; RIP->0xbd8200e '..\\\\..\\\\aha\\\\components\\\\device_service\\\\device_service.cc'\n0284a091: lea      rbx, [rsp + 0x28]\n0284a096: mov      rcx, rbx\n0284a099: mov      r8d, 0x293\n0284a09f: xor      r9d, r9d\n0284a0a2: call     0x142399ba0 ; target RVA 0x2399ba0\n0284a0a7: lea      rcx, [rsp + 0x38]\n0284a0ac: lea      rdx, [rip + 0x953807e] ; RIP->0xbd82131 'DeviceService, has cache, directly return cache: '\n0284a0b3: mov      r8d, 0x31\n0284a0b9: call     0x140211470 ; target RVA 0x211470\n0284a0be: movzx    r8d, byte ptr [rsi + 0x10]\n0284a0c3: test     r8b, 1\n0284a0c7: jne      0x14284a0d2\n0284a0c9: shr      r8d, 1\n0284a0cc: lea      rdx, [rsi + 0x11]\n0284a0d0: jmp      0x14284a0da ; target RVA 0x284a0da\n0284a0d2: mov      r8, qword ptr [rsi + 0x18]\n0284a0d6: mov      rdx, qword ptr [rsi + 0x20]\n0284a0da: mov      rcx, rax\n0284a0dd: call     0x140211470 ; target RVA 0x211470\n0284a0e2: mov      rcx, rbx\n0284a0e5: call     0x14239a380 ; target RVA 0x239a380\n0284a0ea: lea      r14, [rsi + 0x288]",
+      "raw_artifact": "logs/aha-static-20261120/detail/function-0284a040.asm"
+    },
+    {
+      "name": "cache_load",
+      "function_rva": "0x2848e10",
+      "function_end_rva": "0x2848f16",
+      "range_start": "0x2848e2e",
+      "range_end": "0x2848e8e",
+      "excerpt": "02848e2e: call     0x14284ee10 ; target RVA 0x284ee10\n02848e33: lea      rcx, [rip + 0x95397a6] ; RIP->0xbd825e0 'aha.device.device_id'\n02848e3a: lea      rdx, [rsp + 0x160]\n02848e42: mov      qword ptr [rdx], rcx\n02848e45: mov      qword ptr [rdx + 8], 0x14\n02848e4d: mov      rcx, rax\n02848e50: call     0x14284ee90 ; target RVA 0x284ee90\n02848e55: test     rax, rax\n02848e58: je       0x142848eb8\n02848e5a: movzx    ecx, byte ptr [rax]\n02848e5d: test     cl, 1\n02848e60: je       0x142848e71\n02848e62: mov      rcx, qword ptr [rax + 8]\n02848e66: test     rcx, rcx\n02848e69: je       0x142848eb8\n02848e6b: mov      rax, qword ptr [rax + 0x10]\n02848e6f: jmp      0x142848e7b ; target RVA 0x2848e7b\n02848e71: test     rcx, rcx\n02848e74: je       0x142848eb8\n02848e76: shr      ecx, 1\n02848e78: inc      rax\n02848e7b: lea      r8, [rsi + 0x10]\n02848e7f: lea      rdx, [rsp + 0x20]\n02848e84: mov      qword ptr [rdx], rax\n02848e87: mov      qword ptr [rdx + 8], rcx\n02848e8b: mov      rcx, rsi\n02848e8e: call     0x14284c9e0 ; target RVA 0x284c9e0",
+      "raw_artifact": "logs/aha-static-20261120/function-02848e10.asm"
+    },
+    {
+      "name": "cache_schema_version",
+      "function_rva": "0x284c9e0",
+      "function_end_rva": "0x284d094",
+      "range_start": "0x284cae6",
+      "range_end": "0x284cbd2",
+      "excerpt": "0284cae6: lea      r12, [rip + 0x95358a4] ; RIP->0xbd82391 'device_id_str'\n0284caed: lea      rdx, [rsp + 0x90]\n0284caf5: mov      qword ptr [rdx], r12\n0284caf8: mov      qword ptr [rdx + 8], 0xd\n0284cb00: mov      rcx, rax\n0284cb03: call     0x142360400 ; target RVA 0x2360400\n0284cb08: test     rax, rax\n0284cb0b: je       0x14284cbd8\n0284cb11: lea      r13, [rip + 0x9535887] ; RIP->0xbd8239f 'install_id_str'\n0284cb18: lea      rdx, [rsp + 0x80]\n0284cb20: mov      qword ptr [rdx], r13\n0284cb23: mov      qword ptr [rdx + 8], 0xe\n0284cb2b: mov      rcx, rbx\n0284cb2e: call     0x142360400 ; target RVA 0x2360400\n0284cb33: test     rax, rax\n0284cb36: je       0x14284cbd8\n0284cb3c: lea      r15, [rip + 0x81c526f] ; RIP->0xaa11db2 'uuid'\n0284cb43: lea      rdx, [rsp + 0x70]\n0284cb48: mov      qword ptr [rdx], r15\n0284cb4b: mov      qword ptr [rdx + 8], 4\n0284cb53: mov      rcx, rbx\n0284cb56: call     0x142360400 ; target RVA 0x2360400\n0284cb5b: test     rax, rax\n0284cb5e: je       0x14284cbd8\n0284cb60: lea      rbp, [rip + 0x81e33df] ; RIP->0xaa2ff46 'version'\n0284cb67: lea      rdx, [rsp + 0x60]\n0284cb6c: mov      qword ptr [rdx], rbp\n0284cb6f: mov      qword ptr [rdx + 8], 7\n0284cb77: mov      rcx, rbx\n0284cb7a: call     0x142360400 ; target RVA 0x2360400\n0284cb7f: test     rax, rax\n0284cb82: je       0x14284cbd8\n0284cb84: lea      rdx, [rsp + 0x50]\n0284cb89: mov      qword ptr [rdx], rbp\n0284cb8c: mov      qword ptr [rdx + 8], 7\n0284cb94: mov      rcx, rbx\n0284cb97: call     0x142360400 ; target RVA 0x2360400\n0284cb9c: movzx    ecx, byte ptr [rax]\n0284cb9f: test     cl, 1\n0284cba2: je       0x14284cbae\n0284cba4: mov      rcx, qword ptr [rax + 8]\n0284cba8: mov      rax, qword ptr [rax + 0x10]\n0284cbac: jmp      0x14284cbb3 ; target RVA 0x284cbb3\n0284cbae: shr      ecx, 1\n0284cbb0: inc      rax\n0284cbb3: cmp      rcx, 3\n0284cbb7: jne      0x14284cbd8\n0284cbb9: movzx    ecx, word ptr [rip + 0x8d79967] ; RIP->0xb5c6527 '1.2'\n0284cbc0: xor      cx, word ptr [rax]\n0284cbc3: mov      dl, byte ptr [rip + 0x8d79960] ; RIP->0xb5c6529\n0284cbc9: xor      dl, byte ptr [rax + 2]\n0284cbcc: movzx    eax, dl\n0284cbcf: or       ax, cx\n0284cbd2: je       0x14284cd66",
+      "raw_artifact": "logs/aha-static-20261120/function-0284c9e0.asm"
+    },
+    {
+      "name": "cache_numeric_id_and_uuid_check",
+      "function_rva": "0x284c9e0",
+      "function_end_rva": "0x284d094",
+      "range_start": "0x284cde5",
+      "range_end": "0x284cee4",
+      "excerpt": "0284cde5: mov      qword ptr [rsp + 0x240], 0\n0284cdf1: movzx    eax, byte ptr [r14]\n0284cdf5: lea      r12, [r14 + 1]\n0284cdf9: test     al, 1\n0284cdfb: jne      0x14284ce04\n0284cdfd: shr      eax, 1\n0284cdff: mov      rdx, r12\n0284ce02: jmp      0x14284ce0c ; target RVA 0x284ce0c\n0284ce04: mov      rax, qword ptr [r14 + 8]\n0284ce08: mov      rdx, qword ptr [r14 + 0x10]\n0284ce0c: lea      rcx, [rsp + 0xe0]\n0284ce14: mov      qword ptr [rcx], rdx\n0284ce17: mov      qword ptr [rcx + 8], rax\n0284ce1b: lea      rdx, [rsp + 0x240]\n0284ce23: call     0x1441f5160 ; target RVA 0x41f5160\n0284ce28: test     al, al\n0284ce2a: je       0x14284ce9a\n0284ce2c: cmp      qword ptr [rsp + 0x240], 0\n0284ce35: je       0x14284ce9a\n0284ce37: movzx    eax, byte ptr [rdi + 0x208]\n0284ce3e: test     al, 1\n0284ce40: jne      0x14284ce4a\n0284ce42: mov      r8d, eax\n0284ce45: shr      r8d, 1\n0284ce48: jmp      0x14284ce51 ; target RVA 0x284ce51\n0284ce4a: mov      r8, qword ptr [rdi + 0x210]\n0284ce51: movzx    ecx, byte ptr [r15]\n0284ce55: test     cl, 1\n0284ce58: jne      0x14284ce60\n0284ce5a: mov      edx, ecx\n0284ce5c: shr      edx, 1\n0284ce5e: jmp      0x14284ce64 ; target RVA 0x284ce64\n0284ce60: mov      rdx, qword ptr [r15 + 8]\n0284ce64: cmp      r8, rdx\n0284ce67: jne      0x14284ce9a\n0284ce69: test     cl, 1\n0284ce6c: jne      0x14284ce73\n0284ce6e: inc      r15\n0284ce71: jmp      0x14284ce77 ; target RVA 0x284ce77\n0284ce73: mov      r15, qword ptr [r15 + 0x10]\n0284ce77: test     al, 1\n0284ce79: jne      0x14284ce84\n0284ce7b: add      rdi, 0x209\n0284ce82: jmp      0x14284ce8b ; target RVA 0x284ce8b\n0284ce84: mov      rdi, qword ptr [rdi + 0x218]\n0284ce8b: mov      rcx, rdi\n0284ce8e: mov      rdx, r15\n0284ce91: call     0x145420360 ; target RVA 0x5420360\n0284ce96: test     eax, eax\n0284ce98: je       0x14284cee9\n0284ce9a: mov      ecx, 2\n0284ce9f: call     0x144d38f30 ; target RVA 0x4d38f30\n0284cea4: test     al, al\n0284cea6: je       0x14284cca6\n0284ceac: lea      rdx, [rip + 0x953515b] ; RIP->0xbd8200e '..\\\\..\\\\aha\\\\components\\\\device_service\\\\device_service.cc'\n0284ceb3: lea      rsi, [rsp + 0xe0]\n0284cebb: mov      rcx, rsi\n0284cebe: mov      r8d, 0x469\n0284cec4: mov      r9d, 2\n0284ceca: call     0x142399ba0 ; target RVA 0x2399ba0\n0284cecf: lea      rcx, [rsp + 0xf0]\n0284ced7: lea      rdx, [rip + 0x9535950] ; RIP->0xbd8282e 'DeviceService, cache uuid is not equal system uuid or cache did is local did'\n0284cede: mov      r8d, 0x4c\n0284cee4: jmp      0x14284cc99 ; target RVA 0x284cc99",
+      "raw_artifact": "logs/aha-static-20261120/function-0284c9e0.asm"
+    },
+    {
+      "name": "cache_serialization",
+      "function_rva": "0x2849a70",
+      "function_end_rva": "0x2849d2a",
+      "range_start": "0x2849abc",
+      "range_end": "0x2849c99",
+      "excerpt": "02849abc: movzx    eax, byte ptr [rsi + 0x10]\n02849ac0: test     al, 1\n02849ac2: je       0x142849ace\n02849ac4: mov      rax, qword ptr [rsi + 0x18]\n02849ac8: mov      rcx, qword ptr [rsi + 0x20]\n02849acc: jmp      0x142849ad4 ; target RVA 0x2849ad4\n02849ace: shr      eax, 1\n02849ad0: lea      rcx, [rsi + 0x11]\n02849ad4: lea      r8, [rsp + 0xd0]\n02849adc: mov      qword ptr [r8], rcx\n02849adf: mov      qword ptr [r8 + 8], rax\n02849ae3: lea      rax, [rip + 0x95388a7] ; RIP->0xbd82391 'device_id_str'\n02849aea: lea      rdx, [rsp + 0xc0]\n02849af2: mov      qword ptr [rdx], rax\n02849af5: mov      qword ptr [rdx + 8], 0xd\n02849afd: lea      rcx, [rsp + 0xe0]\n02849b05: call     0x142360b20 ; target RVA 0x2360b20\n02849b0a: movzx    eax, byte ptr [rsi + 0x28]\n02849b0e: test     al, 1\n02849b10: jne      0x142849b1a\n02849b12: shr      eax, 1\n02849b14: lea      rcx, [rsi + 0x29]\n02849b18: jmp      0x142849b22 ; target RVA 0x2849b22\n02849b1a: mov      rax, qword ptr [rsi + 0x30]\n02849b1e: mov      rcx, qword ptr [rsi + 0x38]\n02849b22: lea      r8, [rsp + 0xb0]\n02849b2a: mov      qword ptr [r8], rcx\n02849b2d: mov      qword ptr [r8 + 8], rax\n02849b31: lea      rax, [rip + 0x9538867] ; RIP->0xbd8239f 'install_id_str'\n02849b38: lea      rdx, [rsp + 0xa0]\n02849b40: mov      qword ptr [rdx], rax\n02849b43: mov      qword ptr [rdx + 8], 0xe\n02849b4b: lea      rdi, [rsp + 0xe0]\n02849b53: mov      rcx, rdi\n02849b56: call     0x142360b20 ; target RVA 0x2360b20\n02849b5b: movzx    eax, byte ptr [rsi + 0x208]\n02849b62: test     al, 1\n02849b64: je       0x142849b76\n02849b66: mov      rax, qword ptr [rsi + 0x210]\n02849b6d: mov      rsi, qword ptr [rsi + 0x218]\n02849b74: jmp      0x142849b7f ; target RVA 0x2849b7f\n02849b76: shr      eax, 1\n02849b78: add      rsi, 0x209\n02849b7f: lea      r8, [rsp + 0x90]\n02849b87: mov      qword ptr [r8], rsi\n02849b8a: mov      qword ptr [r8 + 8], rax\n02849b8e: lea      rax, [rip + 0x81c821d] ; RIP->0xaa11db2 'uuid'\n02849b95: lea      rdx, [rsp + 0x80]\n02849b9d: mov      qword ptr [rdx], rax\n02849ba0: mov      qword ptr [rdx + 8], 4\n02849ba8: mov      rcx, rdi\n02849bab: call     0x142360b20 ; target RVA 0x2360b20\n02849bb0: movups   xmm0, xmmword ptr [rip + 0x9538a59] ; RIP->0xbd82610\n02849bb7: lea      r8, [rsp + 0x70]\n02849bbc: movaps   xmmword ptr [r8], xmm0\n02849bc0: lea      rax, [rip + 0x81e637f] ; RIP->0xaa2ff46 'version'\n02849bc7: lea      rdx, [rsp + 0x60]\n02849bcc: mov      qword ptr [rdx], rax\n02849bcf: mov      qword ptr [rdx + 8], 7\n02849bd7: mov      rcx, rdi\n02849bda: call     0x142360b20 ; target RVA 0x2360b20\n02849bdf: mov      qword ptr [rsp + 0x58], rbx\n02849be4: xorps    xmm0, xmm0\n02849be7: lea      r8, [rsp + 0x110]\n02849bef: movaps   xmmword ptr [r8], xmm0\n02849bf3: mov      qword ptr [r8 + 0x10], 0\n02849bfb: lea      rcx, [rsp + 0xf8]\n02849c03: mov      qword ptr [rcx + 8], rdi\n02849c07: mov      dword ptr [rcx + 0x10], 6\n02849c0e: mov      r9d, 0xc8\n02849c14: mov      edx, 2\n02849c19: call     0x14239ccc0 ; target RVA 0x239ccc0\n02849c1e: test     al, al\n02849c20: je       0x142849d0f\n02849c26: lea      rsi, [rsp + 0x110]\n02849c2e: mov      rax, qword ptr [rsi + 0x10]\n02849c32: lea      rcx, [rsp + 0x41]\n02849c37: mov      qword ptr [rcx + 0xf], rax\n02849c3b: movaps   xmm0, xmmword ptr [rsi]\n02849c3e: movaps   xmmword ptr [rcx - 1], xmm0\n02849c42: mov      byte ptr [rcx + 0x17], 1\n02849c46: movzx    edx, byte ptr [rcx - 1]\n02849c4a: mov      r8d, edx\n02849c4d: shr      r8d, 1\n02849c50: test     dl, 1\n02849c53: cmovne   r8, qword ptr [rcx + 7]\n02849c58: mov      qword ptr [rsi + 0x10], rbx\n02849c5c: cmove    rax, rcx\n02849c60: movaps   xmmword ptr [rsi], xmm6\n02849c63: lea      rdx, [rsp + 0x30]\n02849c68: mov      qword ptr [rdx], rax\n02849c6b: mov      qword ptr [rdx + 8], r8\n02849c6f: mov      rcx, rsi\n02849c72: call     0x142d9dca0 ; target RVA 0x2d9dca0\n02849c77: call     0x14284ee10 ; target RVA 0x284ee10\n02849c7c: lea      rcx, [rip + 0x953895d] ; RIP->0xbd825e0 'aha.device.device_id'\n02849c83: lea      rdx, [rsp + 0x20]\n02849c88: mov      qword ptr [rdx], rcx\n02849c8b: mov      qword ptr [rdx + 8], 0x14\n02849c93: mov      rcx, rax\n02849c96: mov      r8, rsi\n02849c99: call     0x14284d0a0 ; target RVA 0x284d0a0",
+      "raw_artifact": "logs/aha-static-20261120/function-02849a70.asm"
+    },
+    {
+      "name": "tiny_storage_file",
+      "function_rva": "0x284efe0",
+      "function_end_rva": "0x284f389",
+      "range_start": "0x284f077",
+      "range_end": "0x284f1c9",
+      "excerpt": "0284f077: lea      r14, [rsp + 0x1e0]\n0284f07f: mov      rcx, r14\n0284f082: call     0x144243300 ; target RVA 0x4243300\n0284f087: movups   xmm0, xmmword ptr [rip + 0x9533bba] ; RIP->0xbd82c48\n0284f08e: lea      rdx, [rsp + 0x1d0]\n0284f096: movaps   xmmword ptr [rdx], xmm0\n0284f099: mov      rcx, rsi\n0284f09c: mov      r8, r14\n0284f09f: xor      r9d, r9d\n0284f0a2: call     0x142532a90 ; target RVA 0x2532a90\n0284f0a7: movabs   r12, 0xaaaaaaaaaaaaaaaa\n0284f0b1: lea      r14, [rsp + 0x1b0]\n0284f0b9: mov      qword ptr [r14 + 0x10], r12\n0284f0bd: movaps   xmm6, xmmword ptr [rip + 0x7f18dac] ; RIP->0xa767e70\n0284f0c4: movaps   xmmword ptr [r14], xmm6\n0284f0c8: lea      rax, [rip + 0x81e690f] ; RIP->0xaa359de\n0284f0cf: lea      r8, [rsp + 0x1a0]\n0284f0d7: mov      qword ptr [r8], rax\n0284f0da: mov      qword ptr [r8 + 8], 3\n0284f0e2: mov      rcx, rbx\n0284f0e5: mov      rdx, r14\n0284f0e8: call     0x1423a1f30 ; target RVA 0x23a1f30\n0284f0ed: mov      rcx, r14\n0284f0f0: call     0x142352da0 ; target RVA 0x2352da0\n0284f0f5: test     al, al\n0284f0f7: jne      0x14284f15a\n0284f0f9: lea      rcx, [rsp + 0x1b0]\n0284f101: call     0x14235d370 ; target RVA 0x235d370\n0284f106: test     al, al\n0284f108: jne      0x14284f15a\n0284f10a: mov      ecx, 2\n0284f10f: call     0x144d38f30 ; target RVA 0x4d38f30\n0284f114: test     al, al\n0284f116: je       0x14284f15a\n0284f118: lea      rdx, [rip + 0x9533b39] ; RIP->0xbd82c58 '..\\\\..\\\\aha\\\\components\\\\tiny_storage\\\\tiny_storage.cc'\n0284f11f: lea      rbx, [rsp + 0x70]\n0284f124: mov      rcx, rbx\n0284f127: mov      r8d, 0x39\n0284f12d: mov      r9d, 2\n0284f133: call     0x142399ba0 ; target RVA 0x2399ba0\n0284f138: lea      rcx, [rsp + 0x80]\n0284f140: lea      rdx, [rip + 0x81e689f] ; RIP->0xaa359e6 'Create aha dir failed'\n0284f147: mov      r8d, 0x15\n0284f14d: call     0x140211470 ; target RVA 0x211470\n0284f152: mov      rcx, rbx\n0284f155: call     0x14239a380 ; target RVA 0x239a380\n0284f15a: lea      r14, [rsp + 0x50]\n0284f15f: mov      qword ptr [r14 + 0x10], r12\n0284f163: movaps   xmmword ptr [r14], xmm6\n0284f167: lea      rax, [rip + 0x9533b1c] ; RIP->0xbd82c8a\n0284f16e: lea      r8, [rsp + 0x40]\n0284f173: mov      qword ptr [r8], rax\n0284f176: mov      qword ptr [r8 + 8], 0xb\n0284f17e: lea      rcx, [rsp + 0x1b0]\n0284f186: mov      rdx, r14\n0284f189: call     0x1423a1f30 ; target RVA 0x23a1f30\n0284f18e: mov      ecx, 0x1d8\n0284f193: call     0x1453c3f04 ; target RVA 0x53c3f04\n0284f198: mov      rbx, rax\n0284f19b: lea      rdx, [rip + 0x9533bd5] ; RIP->0xbd82d77\n0284f1a2: lea      r15, [rsp + 0x70]\n0284f1a7: mov      rcx, r15\n0284f1aa: call     0x144d1bec0 ; target RVA 0x4d1bec0\n0284f1af: lea      r8, [rsp + 0x30]\n0284f1b4: mov      qword ptr [r8], 0\n0284f1bb: mov      r9, qword ptr [r15]\n0284f1be: mov      byte ptr [rsp + 0x20], 0\n0284f1c3: mov      rcx, rbx\n0284f1c6: mov      rdx, r14\n0284f1c9: call     0x142534200 ; target RVA 0x2534200",
+      "raw_artifact": "logs/aha-static-20261120/detail/function-0284efe0.asm"
+    },
+    {
+      "name": "uuid_source",
+      "function_rva": "0x2846a70",
+      "function_end_rva": "0x28489cd",
+      "range_start": "0x28477ee",
+      "range_end": "0x2847860",
+      "excerpt": "028477ee: lea      rbx, [rsp + 0x1f0]\n028477f6: movaps   xmmword ptr [rbx], xmm6\n028477f9: mov      r15, r12\n028477fc: mov      qword ptr [rbx + 0x10], r12\n02847800: call     0x141d370d0 ; target RVA 0x1d370d0\n02847805: mov      rcx, rax\n02847808: mov      rdx, rbx\n0284780b: call     0x141d384b0 ; target RVA 0x1d384b0\n02847810: test     byte ptr [rbx], 1\n02847813: je       0x1428479dd\n02847819: cmp      qword ptr [rsp + 0x1f8], 0x24\n02847822: jne      0x1428479dd\n02847828: mov      rsi, qword ptr [rsp + 0x200]\n02847830: lea      rdx, [rip + 0x953b1ec] ; RIP->0xbd82a23 'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF'\n02847837: mov      r8d, 0x24\n0284783d: mov      rcx, rsi\n02847840: call     0x145420360 ; target RVA 0x5420360\n02847845: test     eax, eax\n02847847: je       0x142847866\n02847849: lea      rdx, [rip + 0x953b1f8] ; RIP->0xbd82a48 '00000000-0000-0000-0000-000000000000'\n02847850: mov      r8d, 0x24\n02847856: mov      rcx, rsi\n02847859: call     0x145420360 ; target RVA 0x5420360\n0284785e: test     eax, eax\n02847860: jne      0x1428479dd",
+      "raw_artifact": "logs/aha-static-20261120/function-02846a70.asm"
+    },
+    {
+      "name": "mac_registry",
+      "function_rva": "0x2846a70",
+      "function_end_rva": "0x28489cd",
+      "range_start": "0x2846ca7",
+      "range_end": "0x2846cd2",
+      "excerpt": "02846ca7: lea      rsi, [rsp + 0x1f0]\n02846caf: mov      qword ptr [rsi + 0x10], r12\n02846cb3: movaps   xmmword ptr [rsi], xmm6\n02846cb6: lea      r8, [rip + 0x953bc13] ; RIP->0xbd828d0\n02846cbd: mov      rcx, rsi\n02846cc0: mov      rdx, 0xffffffff80000001\n02846cc7: mov      r9d, 0x20119\n02846ccd: call     0x142340b10 ; target RVA 0x2340b10\n02846cd2: pxor     xmm0, xmm0",
+      "raw_artifact": "logs/aha-static-20261120/function-02846a70.asm"
+    },
+    {
+      "name": "response_acceptance",
+      "function_rva": "0x284b820",
+      "function_end_rva": "0x284c48d",
+      "range_start": "0x284bbb8",
+      "range_end": "0x284bbe0",
+      "excerpt": "0284bbb8: test     r12d, r12d\n0284bbbb: jne      0x14284bd08\n0284bbc1: cmp      ebp, 0xc8\n0284bbc7: jne      0x14284bd08\n0284bbcd: cmp      byte ptr [rsi + 0x18], 1\n0284bbd1: jne      0x14284bbe6\n0284bbd3: mov      rcx, rdi\n0284bbd6: mov      rdx, rsi\n0284bbd9: call     0x14284c490 ; target RVA 0x284c490\n0284bbde: test     al, al\n0284bbe0: jne      0x14284be68",
+      "raw_artifact": "logs/aha-static-20261120/cache/function-0284b820.asm"
+    },
+    {
+      "name": "cache_then_activation",
+      "function_rva": "0x284b820",
+      "function_end_rva": "0x284c48d",
+      "range_start": "0x284c1f6",
+      "range_end": "0x284c280",
+      "excerpt": "0284c1f6: mov      rbp, rsi\n0284c1f9: mov      rsi, r14\n0284c1fc: mov      qword ptr [rsp + 0x28], r15\n0284c201: mov      rcx, rdi\n0284c204: call     0x142849a70 ; target RVA 0x2849a70\n0284c209: mov      rax, qword ptr [rsp + 0x38]\n0284c20e: cmp      byte ptr [rax + 3], 1\n0284c212: jne      0x14284c21a\n0284c214: cmp      byte ptr [rax + 2], 0\n0284c218: jne      0x14284c27d\n0284c21a: mov      r15, qword ptr [rdi + 0x280]\n0284c221: mov      qword ptr [rdi + 0x280], 0\n0284c22c: test     r15, r15\n0284c22f: je       0x14284c27d\n0284c231: mov      rcx, qword ptr [r15]\n0284c234: test     rcx, rcx\n0284c237: je       0x14284c489\n0284c23d: mov      r14, r13\n0284c240: lea      r13, [rsp + 0xd0]\n0284c248: mov      qword ptr [r13], rcx\n0284c24c: mov      qword ptr [r15], 0\n0284c253: mov      rax, qword ptr [rcx + 8]\n0284c257: xor      edx, edx\n0284c259: mov      r8, r12\n0284c25c: call     qword ptr [rip + 0x9cd66d6] ; RIP->0xc522938\n0284c262: mov      rcx, r13\n0284c265: call     0x144d39a40 ; target RVA 0x4d39a40\n0284c26a: mov      rcx, r15\n0284c26d: call     0x144d39a40 ; target RVA 0x4d39a40\n0284c272: mov      rcx, r15\n0284c275: call     0x1453c3f90 ; target RVA 0x53c3f90\n0284c27a: mov      r13, r14\n0284c27d: mov      rcx, rdi\n0284c280: call     0x14284c820 ; target RVA 0x284c820",
+      "raw_artifact": "logs/aha-static-20261120/cache/function-0284b820.asm"
+    },
+    {
+      "name": "register_compression",
+      "function_rva": "0x284a240",
+      "function_end_rva": "0x284a5ce",
+      "range_start": "0x284a383",
+      "range_end": "0x284a3bb",
+      "excerpt": "0284a383: lea      rax, [rip + 0x8ba9200] ; RIP->0xb3f358a '1.3.1'\n0284a38a: mov      qword ptr [rsp + 0x30], rax\n0284a38f: mov      dword ptr [rsp + 0x38], 0x58\n0284a397: mov      dword ptr [rsp + 0x28], 0\n0284a39f: mov      dword ptr [rsp + 0x20], 9\n0284a3a7: mov      rcx, r15\n0284a3aa: mov      edx, 0xffffffff\n0284a3af: mov      r8d, 8\n0284a3b5: mov      r9d, 0x1f\n0284a3bb: call     0x1423f85e0 ; target RVA 0x23f85e0",
+      "raw_artifact": "logs/aha-static-20261120/function-0284a240.asm"
+    }
+  ],
+  "decoded_constants": {
+    "cache_key": "aha.device.device_id",
+    "cache_schema_version": "1.2",
+    "tiny_storage_pref_key": "tiny_storage_data",
+    "path_components": [
+      "aha",
+      "TinyStorage"
+    ],
+    "mac_registry_key": "HKCU\\Software\\DeviceInfo\\MacAddr",
+    "mac_registry_value": "mac"
+  },
+  "not_observed": [
+    "server device allocation/deduplication algorithm",
+    "runtime cache contents",
+    "final outbound packets",
+    "all native cache crypto internals"
+  ]
+}

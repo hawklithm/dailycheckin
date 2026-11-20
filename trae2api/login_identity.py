@@ -44,6 +44,8 @@ class LoginIdentity:
     activated: bool = False
     region: str = "CN"
     hardware_uuid: str = field(default="", repr=False)
+    device_cache: object = field(default=None, repr=False)
+    device_region: object = field(default=None, repr=False)
 
     @property
     def public_key_pem(self) -> str:
@@ -53,9 +55,14 @@ class LoginIdentity:
         return key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo).decode()
 
     def as_dict(self) -> dict:
-        return {"version": 1, "machineId": self.machine_id, "privateKeyPEM": self.private_key_pem,
+        result = {"version": 1, "machineId": self.machine_id, "privateKeyPEM": self.private_key_pem,
                 "deviceId": self.device_id, "installId": self.install_id, "registered": self.registered,
                 "activated": self.activated, "region": self.region, "hardwareUuid": self.hardware_uuid}
+        if self.device_cache is not None:
+            result["ahaDeviceCache"] = self.device_cache
+        if self.device_region is not None:
+            result["ahaDeviceRegion"] = self.device_region
+        return result
 
 
 class IdentityStore:
@@ -84,14 +91,23 @@ class IdentityStore:
                 if data.get("version") != 1:
                     raise ValueError()
                 identity = LoginIdentity(data["machineId"], data["privateKeyPEM"], data["deviceId"],
-                    data["installId"], data["registered"], data["activated"], data["region"], data["hardwareUuid"])
+                    data["installId"], data["registered"], data["activated"], data["region"], data["hardwareUuid"],
+                    data.get("ahaDeviceCache") if data.get("ahaDeviceCache") is not None else
+                    ({} if "ahaDeviceCache" in data else None), data.get("ahaDeviceRegion"))
                 if (not isinstance(identity.machine_id, str) or not identity.machine_id
                         or type(identity.registered) is not bool or type(identity.activated) is not bool
                         or identity.activated and not identity.registered):
                     raise ValueError()
-                if identity.registered and (not identity.device_id.isdecimal() or int(identity.device_id) <= 0
-                        or not identity.install_id.isdecimal() or int(identity.install_id) <= 0 or not identity.hardware_uuid):
-                    raise ValueError()
+                if identity.registered:
+                    if any(not isinstance(value, str) for value in
+                           (identity.device_id, identity.install_id, identity.hardware_uuid)):
+                        raise ValueError()
+                    # New records have their own native-compatible cache
+                    # validator; legacy profiles retain the old strict check.
+                    if identity.device_cache is None and (not identity.device_id.isdecimal()
+                            or int(identity.device_id) <= 0 or not identity.install_id.isdecimal()
+                            or int(identity.install_id) <= 0 or not identity.hardware_uuid):
+                        raise ValueError()
                 identity.public_key_pem
                 return identity
             except (KeyError, TypeError, ValueError, AttributeError):

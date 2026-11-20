@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "environment": "sandbox",
+  "app_id": "local-device-lab",
+  "base_url": "http://127.0.0.1:8765",
+  "allowed_cidrs": ["127.0.0.0/8"],
+  "max_requests": 8,
+  "timeout_seconds": 10,
+  "fixture_ids": ["fixture-a", "fixture-b", "fixture-invalid"],
+  "output_directory": "logs/sandbox-device-lab/default"
+}
