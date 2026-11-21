@@ -20,7 +20,7 @@ uv run --extra workbuddy pytest
 uv build --out-dir dist
 ```
 
-生成的 `dist/daily_checkin-0.1.1.dev2-py3-none-any.whl` 可供 WorkBuddy2API 本地依赖；`dist/buddy_agent_auth-0.1.0.dev1-py3-none-any.whl` 用于当前开发环境解析 WorkBuddy 可选依赖。`dist` 中的包文件不提交到 Git，因此新检出仓库需要先构建认证 wheel，已发布版本可从包仓库解析。需要更新依赖时请增加 dev 版本号并重新构建。
+生成的 `dist/buddy_agent_checkin-0.1.1.dev2-py3-none-any.whl` 可供 WorkBuddy2API 本地依赖；`dist/buddy_agent_auth-0.1.0.dev1-py3-none-any.whl` 用于当前开发环境解析 WorkBuddy 可选依赖。`dist` 中的包文件不提交到 Git，因此新检出仓库需要先构建认证 wheel，已发布版本可从包仓库解析。需要更新依赖时请增加 dev 版本号并重新构建。
 
 ## 签到快速开始
 
@@ -67,7 +67,7 @@ python -m daily_checkin workbuddy schedule
 
 `--accounts-dir` 位于 `workbuddy` 与子命令之间；未指定时使用 `~/.workbuddy2api/accounts`。`schedule` 会持续运行并在启动及每日按计划检查，Ctrl+C 停止。签到前先查询，结果不确定时不重复领取。WorkBuddy2API 作为宿主时调用同一活动服务；两个进程共用账号目录时，通过持久化的 `daily-checkin-attempts.sqlite3` 防止同一账号当天的未知结果被重复提交。这个记录会保守地阻止重试，不能代替上游状态确认。
 
-开发版本发布后可使用 `pip install --pre daily-checkin` 安装；本地源码联调仍可使用认证包源码或 wheel。真实 WorkBuddy 登录和签到尚未完成本次集成的线上验收。 WorkBuddy2API 的 `/v1/checkin` 和 `/v1/checkin-status` 兼容端点也由 DailyCheckin 提供，保持原有上游透传语义；其中 `/v1/checkin` 直接提交，不经过账号签到服务的状态预检或跨进程去重。管理界面和独立 `execute` 命令使用账号签到服务。
+开发版本发布后可使用 `pip install --pre buddy-agent-checkin` 安装；本地源码联调仍可使用认证包源码或 wheel。真实 WorkBuddy 登录和签到尚未完成本次集成的线上验收。 WorkBuddy2API 的 `/v1/checkin` 和 `/v1/checkin-status` 兼容端点也由 DailyCheckin 提供，保持原有上游透传语义；其中 `/v1/checkin` 直接提交，不经过账号签到服务的状态预检或跨进程去重。管理界面和独立 `execute` 命令使用账号签到服务。
 
 ### Trae CN 自动签到
 
