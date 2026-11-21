@@ -110,7 +110,7 @@ def test_account_profile_used_for_registration_and_request(baseline, tmp_path, m
     monkeypatch.setattr('trae2api.aha_registration.register',
                         lambda client, hardware, version: registered.append(hardware) or Registration('123', '456', 'CN'))
     monkeypatch.setattr('trae2api.aha_registration.activate',
-                        lambda client, registration, hardware, version: activated.append(hardware))
+                        lambda client, registration, hardware, version, **kwargs: activated.append(hardware))
     requests = []
     def reply(request):
         requests.append(request)
@@ -152,7 +152,7 @@ def test_cli_modes_share_persisted_device_for_all_requests(baseline, tmp_path, m
     monkeypatch.setattr('trae2api.aha_registration.register',
                         lambda client, hardware, version: registered.append(hardware) or Registration('123', '456', 'CN'))
     monkeypatch.setattr('trae2api.aha_registration.activate',
-                        lambda client, registration, hardware, version: activated.append(hardware))
+                        lambda client, registration, hardware, version, **kwargs: activated.append(hardware))
     requests = []
     def reply(request):
         requests.append(request)

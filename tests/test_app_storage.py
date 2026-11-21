@@ -37,7 +37,7 @@ def test_first_checkin_registers_then_reuses_binding(tmp_path, monkeypatch):
     monkeypatch.setattr('trae2api.aha_registration.register',
                         lambda client, hw, version: calls.append('register') or Registration('123', '456', 'CN'))
     monkeypatch.setattr('trae2api.aha_registration.activate',
-                        lambda client, registration, hw, version: calls.append('activate'))
+                        lambda client, registration, hw, version, **kwargs: calls.append('activate'))
     requests = []
     def handle(request):
         requests.append(request.headers['x-device-id'])
@@ -130,3 +130,65 @@ def test_override_permission_error_is_not_silently_redirected(tmp_path, monkeypa
     monkeypatch.setattr(Path, 'mkdir', mkdir)
     with pytest.raises(PermissionError):
         app_storage.root()
+
+
+@pytest.mark.parametrize('bound', [False, True])
+def test_native_account_device_source_works_without_native_device_records(tmp_path, monkeypatch, bound):
+    from trae2api.aha_registration import Registration
+    from trae2api.device_hardware import Hardware
+    from trae2api.checkin import main
+    native = tmp_path / 'native'
+    (native / 'User/globalStorage').mkdir(parents=True)
+    auth = {'userId': 'user', 'token': 'token', 'account': {'scope': 'marscode'}}
+    (native / 'User/globalStorage/storage.json').write_text(json.dumps({'iCubeAuthInfo://icube.cloudide': json.dumps(auth)}))
+    monkeypatch.setenv('TRAE2API_USER_DATA', str(native))
+    monkeypatch.setattr('trae2api.native_identity.decrypt_value', lambda value: value)
+    hardware = Hardware('uuid', 'serial', 'profile-model', 'brand', 'cpu', 'windows', 'profile-os', '10', '02-11-22-33-44-55')
+    monkeypatch.setattr(Hardware, 'for_account', classmethod(lambda cls, user_id: hardware))
+    if bound:
+        (tmp_path / '.traeapi' / 'device_pair.json').write_text(json.dumps({'user': '111'}))
+    registrations = []
+    monkeypatch.setattr('trae2api.aha_registration.register',
+                        lambda client, hw, version: registrations.append(hw) or Registration('222', '333', 'CN'))
+    monkeypatch.setattr('trae2api.aha_registration.activate', lambda *args, **kwargs: None)
+    seen = []
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={'enable': True, 'checked_in': False})
+    client_class = httpx.Client
+    monkeypatch.setattr('trae2api.checkin.httpx.Client',
+                        lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))
+    assert main(['--native', '--device-id-source', 'get-device-id', '--status-only']) == 0
+    assert seen[0].headers['x-device-id'] == ('111' if bound else '222')
+    assert seen[0].headers['x-device-brand'] == 'profile-model'
+    assert len(registrations) == (0 if bound else 1)
+    assert not (native / 'logs').exists()
+
+
+def test_failed_activation_reuses_pending_registration(tmp_path, monkeypatch):
+    from trae2api.aha_registration import Registration
+    from trae2api.device_hardware import Hardware
+    hardware = Hardware('hardware', '', 'model', '', '', 'windows', '', '', '')
+    monkeypatch.setattr(Hardware, 'for_account', classmethod(lambda cls, user_id: hardware))
+    registered, activated, requests = [], [], []
+    monkeypatch.setattr('trae2api.aha_registration.register',
+                        lambda client, hw, version: registered.append(hw) or Registration('123', '456', 'CN'))
+    def activate(client, registration, hw, version, *, require_confirmation):
+        activated.append((registration, hw, require_confirmation))
+        if len(activated) == 1:
+            raise ValueError('activation failed')
+    monkeypatch.setattr('trae2api.aha_registration.activate', activate)
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={'enable': True, 'checked_in': False})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(ValueError, match='activation failed'):
+            checkin(Account('token', '', user_id='account'), client, status_only=True)
+        assert not (tmp_path / '.traeapi' / 'device_pair.json').exists()
+        pending = json.loads((tmp_path / '.traeapi' / 'device_pending.json').read_text(encoding='utf-8'))
+        assert pending['account']['device_id'] == '123'
+        checkin(Account('token', '', user_id='account'), client, status_only=True)
+    assert len(registered) == 1 and len(activated) == 2
+    assert all(item[0].device_id == '123' and item[1] == hardware and item[2] is False for item in activated)
+    assert requests[0].headers['x-device-id'] == '123'
+    assert json.loads((tmp_path / '.traeapi' / 'device_pending.json').read_text(encoding='utf-8')) == {}

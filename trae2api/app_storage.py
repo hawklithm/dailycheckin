@@ -134,7 +134,6 @@ def resolve_pair(user_id: str, device_id: str, client, version: str):
     from .login_identity import atomic_json
     if not isinstance(user_id, str) or not user_id:
         raise ValueError('check-in credentials must contain auth.userId')
-    device_path(device_id)
     from .device_hardware import Hardware
     hardware = Hardware.for_account(user_id)
     path = root() / 'device_pair.json'
@@ -143,10 +142,31 @@ def resolve_pair(user_id: str, device_id: str, client, version: str):
     with _locked():
         data = _read_pairs(path)
         if user_id not in data:
-            from .aha_registration import register, activate
+            from .aha_registration import Registration, register, activate
             from .aha_device_cache import DeviceRecord
-            registration = register(client, hardware, version or None)
-            activate(client, registration, hardware, version or '3.4.20')
+            pending_path = root() / 'device_pending.json'
+            if pending_path.exists():
+                pending = json.loads(pending_path.read_text(encoding='utf-8-sig'))
+                if not isinstance(pending, dict):
+                    raise ValueError('invalid device_pending.json; refusing to overwrite it')
+            else:
+                pending = {}
+            if user_id in pending:
+                entry = pending[user_id]
+                if (not isinstance(entry, dict) or set(entry) != {'device_id', 'install_id', 'region', 'hardware_uuid'}
+                        or any(not isinstance(value, str) or not value for value in entry.values())
+                        or any(not entry[key].isascii() or not entry[key].isdecimal() or int(entry[key]) <= 0
+                               for key in ('device_id', 'install_id'))
+                        or entry['region'] not in ('CN', 'SG', 'US', 'USTTP')
+                        or entry['hardware_uuid'] != hardware.pc_uuid):
+                    raise ValueError('invalid pending device registration for this account')
+                registration = Registration(entry['device_id'], entry['install_id'], entry['region'])
+            else:
+                registration = register(client, hardware, version or None)
+                pending[user_id] = {'device_id': registration.device_id, 'install_id': registration.install_id,
+                                    'region': registration.region, 'hardware_uuid': hardware.pc_uuid}
+                atomic_json(pending_path, pending)
+            activate(client, registration, hardware, version or '3.4.20', require_confirmation=False)
             device_id = registration.device_id
             cache_path = device_path(device_id)
             if cache_path.exists():
@@ -160,6 +180,8 @@ def resolve_pair(user_id: str, device_id: str, client, version: str):
             atomic_json(cache_path, cache)
             data[user_id] = device_id
             atomic_json(path, data)
+            del pending[user_id]
+            atomic_json(pending_path, pending)
         else:
             device_id = data[user_id]
             device_path(device_id)

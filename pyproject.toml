@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daily-checkin"
+version = "0.1.0"
+description = "Account-aware activity check-in library for Trae CN"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100,<1",
+    "uvicorn>=0.23,<1",
+    "httpx>=0.25,<1",
+    "cryptography>=41",
+]
+
+[project.scripts]
+daily-checkin = "daily_checkin.checkin:main"
+
+[tool.setuptools.packages.find]
+include = ["daily_checkin", "trae2api"]

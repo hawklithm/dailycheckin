@@ -46,7 +46,7 @@ class Account:
     user_id: str = field(default="", repr=False)
 
     @classmethod
-    def from_native(cls, *, device_id_source: DeviceIdSource = "existing") -> "Account":
+    def from_native(cls, *, device_id_source: DeviceIdSource = "get-device-id") -> "Account":
         identity = NativeIdentity.load(device_id_source=device_id_source)
         try:
             _reject_expired_token(identity.token)
@@ -182,12 +182,13 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
             account.native_identity.ensure_current()
         except NativeIdentityError as exc:
             raise CheckinError(str(exc)) from None
-    from .app_storage import resolve_pair
-    device_id, hardware = resolve_pair(account.user_id, account.device_id, client, account.app_version)
-    account = replace(account, device_id=device_id)
-    if hardware is not None:
-        account = replace(account, device_brand=clean_model(hardware.model),
-                          device_type=hardware.os_name, os_version=hardware.os_version)
+    if account.native_identity is None or getattr(account.native_identity, "device_id_source", "get-device-id") != "existing":
+        from .app_storage import resolve_pair
+        device_id, hardware = resolve_pair(account.user_id, account.device_id, client, account.app_version)
+        account = replace(account, device_id=device_id)
+        if hardware is not None:
+            account = replace(account, device_brand=clean_model(hardware.model),
+                              device_type=hardware.os_name, os_version=hardware.os_version)
     status = _read_status(account, client)
     if status_only:
         return {"action": "status", **status}
@@ -221,10 +222,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Trae CN IDE check-in")
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--creds", help="explicit independent credentials JSON file")
-    source.add_argument("--native", action="store_true", help="read the native login and corroborated remote device ID")
+    source.add_argument("--native", action="store_true", help="read the account and token from the native client")
     parser.add_argument("--device-id-source", choices=["existing", "get-device-id"],
-                        help="--native only: existing session-log ID (default), or our getDeviceId "
-                             "using the hardware-validated native cache; no device registration")
+                        help="--native only: get-device-id (default) uses the account-bound device; "
+                             "existing uses the native session device")
     parser.add_argument("--base-url", help="override the installed ug API HTTPS origin")
     parser.add_argument("--user-region", help="override the CN store region header with an observed native value")
     mode = parser.add_mutually_exclusive_group()
@@ -239,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         from .app_storage import root
         root()
-        account = (Account.from_native(device_id_source=args.device_id_source or "existing")
+        account = (Account.from_native(device_id_source=args.device_id_source or "get-device-id")
                    if args.native else Account.from_file(args.creds))
         if args.base_url:
             account = replace(account, base_url=validate_base_url(args.base_url))

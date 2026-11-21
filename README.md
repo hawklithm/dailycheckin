@@ -1,4 +1,36 @@
-# trae2api
+# DailyCheckin
+
+DailyCheckin 是一个专注活动签到的 Python 库，目前支持 Trae CN 签到及签到状态查询，按账号保存设备配置和绑定。项目原名 trae2api；原有代理、登录命令、环境变量和本地数据仍可使用。
+
+## 签到快速开始
+
+在项目目录安装依赖后，可使用新名称运行（也可通过 `pip install -e .` 安装并使用 `daily-checkin` 命令）：
+
+```powershell
+# 查询签到状态
+python -m daily_checkin --native --device-id-source get-device-id --status-only
+
+# 执行签到
+python -m daily_checkin --native --device-id-source get-device-id --execute
+
+# 指定独立凭据文件
+python -m daily_checkin --creds .\trae2api\trae2api.json --status-only
+```
+
+作为 Python 库使用：
+
+```python
+import httpx
+from daily_checkin import Account, checkin
+
+account = Account.from_native(device_id_source="get-device-id")
+with httpx.Client(timeout=30, trust_env=False) as client:
+    result = checkin(account, client, status_only=True)
+```
+
+`--native` 读取原生账号和 token；默认的 `--device-id-source get-device-id` 使用项目中按账号保存的设备配置及绑定，不需要原生设备缓存或会话日志，默认地区为 CN（可用 `--user-region` 覆盖）。显式选择 `--device-id-source existing` 才使用并校验原生设备 ID 和日志地区。首次使用账号设备来源可能触发设备注册和激活；`--execute` 会在符合条件时请求领取。原有 `python -m trae2api.checkin` 入口及 `.traeapi` 账号设备数据继续沿用。设备激活与签到仍需真实环境验收。
+
+## 原有 trae2api 代理及研究记录
 
 TRAE CN IDE (3.4.7) 后端的 OpenAI 兼容代理。当前实现包含本地认证路径和 V1 chat upstream；历史结果曾报告文本请求成功，但远端模型选择及原生能力仍需按下方计划逐项验证。
 
@@ -57,8 +89,8 @@ python -m trae2api                # 0.0.0.0:8080
 登录成功后代理优先使用 `trae2api.json`；删除该文件即回到方式 B。
 独立登录在凭据旁保存 `.device.secret` 设备配置，重复登录会复用注册 ID 和密钥。
 默认在启动时创建 `~/.traeapi`；如用户目录无创建权限，会依次尝试 Python 所在的同名 Windows 用户目录和项目目录下的 `.traeapi`，并提示实际位置。也可通过 `TRAE2API_HOME` 指定完整存储目录（例如 PowerShell 中 `$env:TRAE2API_HOME="D:\traeapi-data"`）；切换目录不会自动迁移已有数据。已注册的独立设备缓存保存在 `~/.traeapi/<deviceId>/TinyStorage`。
-签到或查询签到状态时，以凭据中的 `auth.userId` 为账号标识，`~/.traeapi/device_pair.json` 保存账号 ID 到设备 ID 的映射，不保存 token。账号没有映射时会先联网注册并激活一个新设备，保存其 TinyStorage 和映射后再发送签到请求；已有映射时直接使用账号已绑定的设备 ID。注册或激活失败不会建立映射。凭据缺少 `userId` 时无法记录绑定，签到会报错。原生客户端的凭据和缓存仍保持只读。
-首次注册的设备与现有登录 token 的组合尚未完成真实签到验收。
+签到或查询签到状态时，以凭据中的 `auth.userId` 为账号标识，`~/.traeapi/device_pair.json` 保存账号 ID 到设备 ID 的映射，不保存 token。账号没有映射时会先注册设备，并按原生设备流程发送激活请求；HTTP 200 后保存 TinyStorage 和映射，再发送签到请求。HTTP 200 表示激活请求完成，不单独证明服务端已激活或账号有签到资格。激活请求失败时保留待处理的注册记录，下次复用该设备重试；已有映射时直接使用账号已绑定的设备 ID。凭据缺少 `userId` 时无法记录绑定，签到会报错。原生客户端的凭据和缓存仍保持只读。
+设备激活时会输出 `device_activation` 结构化诊断，包括 HTTP 状态、响应类型和激活标志；不会记录响应正文、令牌或设备 ID。其他日志（例如设备快照）仍可能包含账号和设备标识。首次注册的设备与现有登录 token 的组合尚未完成真实签到验收。
 
 设备硬件信息在进程首次读取时采集一次。签到按 `auth.userId` 在 `~/.traeapi/device_hardware.json` 中查找设备快照；首次使用的账号会生成独立 UUID、漂移后的磁盘序列号和 MAC，并保存完整设备信息，之后直接复用，包括型号和系统版本。调用方可使用 `Hardware.read_native(user_id)` 获取账号快照；不提供账号的设备读取使用进程内缓存的真实设备信息，以兼容原生设备缓存，不会生成漂移结果。设备信息写入控制台和 `logs/debug-<日期>.log`，其中包含账号与设备标识，请注意日志的访问权限和分享范围。
 设备注册/激活已经实测成功；新版独立浏览器授权、换 token 和签到仍待真实验收，详见

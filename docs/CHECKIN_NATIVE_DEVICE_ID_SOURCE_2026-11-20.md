@@ -1,5 +1,7 @@
 # 签到脚本的原生 deviceId 来源选择
 
+> 历史记录：此文描述旧行为。当前 `get-device-id` 是默认值，使用项目按账号保存的设备，不再读取原生设备缓存或会话日志；`existing` 使用原生设备。最新用法见项目 README。
+
 `python -m trae2api.checkin` 在 `--native` 模式下支持
 `--device-id-source existing|get-device-id`。未提供时默认为 `existing`，保持原有行为。
 该参数不能与 `--creds` 搭配。

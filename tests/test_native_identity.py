@@ -70,7 +70,7 @@ def update_auth(storage, **changes):
 def test_native_source_sends_native_token_and_verified_remote_id_without_writes(native):
     root, storage, log = native
     before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
-    account = Account.from_native()
+    account = Account.from_native(device_id_source="existing")
     seen = []
     def handler(request):
         seen.append(request)
@@ -91,7 +91,7 @@ def test_does_not_use_arbitrary_other_oauth_key_when_log_key_missing(native):
     raw["iCubeAuthInfo://icube-dc:another-device"] = raw.pop("iCubeAuthInfo://icube-dc:remote-test-device")
     storage.write_text(json.dumps(raw))
     with pytest.raises(NativeIdentityError, match="does not match"):
-        Account.from_native()
+        Account.from_native(device_id_source="existing")
 
 
 def test_newest_incomplete_session_does_not_fall_back_to_old_device(native):
@@ -100,14 +100,14 @@ def test_newest_incomplete_session_does_not_fall_back_to_old_device(native):
     newest.mkdir()
     (newest / "main.log").write_text("initializing")
     with pytest.raises(NativeIdentityError, match="no completed"):
-        Account.from_native()
+        Account.from_native(device_id_source="existing")
 
 
 def test_rejects_local_fallback(native):
     root, storage, log = native
     log.write_text(log.read_text().replace("local-test-device", "remote-test-device"))
     with pytest.raises(NativeIdentityError, match="local fallback"):
-        Account.from_native()
+        Account.from_native(device_id_source="existing")
 
 
 def test_late_resolution_after_native_timeout_updates_remote_device(native):
@@ -116,13 +116,13 @@ def test_late_resolution_after_native_timeout_updates_remote_device(native):
         "[ICDRS] (init) initialization done, did: local-test-device, ldid: local-test-device, rdid: 0\n"
         "[ICDRS] (init) resolve rdid: remote-test-device\n"
         'getStoreRegion {"region":"CN"}\n')
-    assert Account.from_native().device_id == "remote-test-device"
+    assert Account.from_native(device_id_source="existing").device_id == "remote-test-device"
 
 
 @pytest.mark.parametrize("changed", [{"token": "changed-token"}, {"userId": "changed-account"}])
 def test_account_or_token_change_after_status_stops_before_claim(native, changed):
     root, storage, log = native
-    account = Account.from_native()
+    account = Account.from_native(device_id_source="existing")
     seen = []
     def handler(request):
         seen.append(request.url.path)
@@ -136,7 +136,7 @@ def test_account_or_token_change_after_status_stops_before_claim(native, changed
 
 def test_device_change_after_status_stops_before_claim(native):
     root, storage, log = native
-    account = Account.from_native()
+    account = Account.from_native(device_id_source="existing")
     seen = []
     def handler(request):
         seen.append(request.url.path)
@@ -155,7 +155,7 @@ def test_invalid_native_scope_is_rejected(native):
     root, storage, log = native
     update_auth(storage, account={"scope": "saas"})
     with pytest.raises(NativeIdentityError, match="marscode"):
-        Account.from_native()
+        Account.from_native(device_id_source="existing")
 
 
 def test_expired_native_token_has_native_relogin_instruction(native, monkeypatch):
@@ -164,7 +164,7 @@ def test_expired_native_token_has_native_relogin_instruction(native, monkeypatch
     update_auth(storage, token=f"header.{payload}.signature")
     monkeypatch.setattr("trae2api.checkin.time.time", lambda: 200)
     with pytest.raises(NativeIdentityError, match="sign in to Trae CN"):
-        Account.from_native()
+        Account.from_native(device_id_source="existing")
 
 
 def test_native_dry_run_does_not_read_login(monkeypatch):
@@ -182,103 +182,68 @@ def test_native_cli_status_only_uses_native_source(native, monkeypatch):
     client_class = httpx.Client
     monkeypatch.setattr("trae2api.checkin.httpx.Client",
                         lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))
-    assert main(["--native", "--status-only"]) == 0
+    assert main(["--native", "--device-id-source", "existing", "--status-only"]) == 0
     assert len(seen) == 1
     assert seen[0].headers["x-device-id"] == "remote-test-device"
 
 
-def test_get_device_id_source_calls_our_getter_and_preserves_native_files(implemented_native, monkeypatch):
-    from trae2api.aha_native_lifecycle import NativeAhaDeviceService
-
-    root, storage, log, cache, hardware = implemented_native
-    before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
-    original_getter = NativeAhaDeviceService.get_device_id
-    calls = []
-    async def observed_getter(self, *args, **kwargs):
-        calls.append(self)
-        return await original_getter(self, *args, **kwargs)
-    monkeypatch.setattr(NativeAhaDeviceService, "get_device_id", observed_getter)
+def test_account_device_source_does_not_read_native_device_or_logs(native, monkeypatch):
+    root, storage, log = native
+    log.unlink()
+    raw = json.loads(storage.read_text())
+    raw.pop("iCubeAuthInfo://icube-dc:remote-test-device")
+    storage.write_text(json.dumps(raw))
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair",
+                        lambda user_id, device_id, client, version: ("saved-account-device", None))
     account = Account.from_native(device_id_source="get-device-id")
+    assert account.user_id == "synthetic-user" and account.device_id == ""
     seen = []
     def handler(request):
         seen.append(request)
         return httpx.Response(200, json={"enable": True, "checked_in": False})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         checkin(account, client, status_only=True)
-    assert len(calls) == 3  # Selection, pre-registration validation, and request-time revalidation.
-    assert all(service.backend is None for service in calls)
-    assert seen[0].headers["x-device-id"] == "123456789"
+    assert seen[0].headers["x-device-id"] == "saved-account-device"
     assert seen[0].headers["authorization"] == "Cloud-IDE-JWT native-test-token"
-    assert account.native_identity.device_id_source == "get-device-id"
-    assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    assert seen[0].headers["x-user-region"] == "CN"
 
 
-def test_existing_source_does_not_read_implemented_cache(implemented_native, monkeypatch):
+def test_existing_source_uses_native_device_without_account_pair(native, monkeypatch):
     def unexpected(*args, **kwargs):
-        raise AssertionError("existing source must keep the native session-log path")
-    monkeypatch.setattr("trae2api.native_identity._implemented_device_id", unexpected)
-    assert Account.from_native().device_id == "remote-test-device"
-    assert Account.from_native(device_id_source="existing").device_id == "remote-test-device"
+        raise AssertionError("existing source must not resolve account-bound device")
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair", unexpected)
+    account = Account.from_native(device_id_source="existing")
+    seen = []
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"enable": True, "checked_in": False})
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        checkin(account, client, status_only=True)
+    assert seen[0].headers["x-device-id"] == "remote-test-device"
 
 
-def test_get_device_id_source_does_not_require_log_device_resolution(implemented_native):
-    root, storage, log, cache, hardware = implemented_native
-    log.write_text('getStoreRegion {"region":"CN"}\n')
-    assert Account.from_native(device_id_source="get-device-id").device_id == "123456789"
-    with pytest.raises(NativeIdentityError, match="no completed remote"):
-        Account.from_native(device_id_source="existing")
-
-
-@pytest.mark.parametrize("invalid", ["missing", "corrupt", "other-hardware", "zero"])
-def test_get_device_id_invalid_cache_never_uses_log_fallback_or_registration(implemented_native, invalid):
-    from trae2api.aha_device_cache import DeviceRecord
-
-    root, storage, log, cache, hardware = implemented_native
-    if invalid == "missing":
-        cache.path.unlink()
-    elif invalid == "corrupt":
-        cache.path.write_text('{"tiny_storage_data":{"aha.device.device_id":"broken"}}')
-    else:
-        cache.save_device(DeviceRecord("0" if invalid == "zero" else "123456789", "987654321",
-                                       "other-uuid" if invalid == "other-hardware" else hardware.pc_uuid))
-    with pytest.raises(NativeIdentityError, match="no valid native cache"):
-        Account.from_native(device_id_source="get-device-id")
-
-
-def test_get_device_id_source_requires_matching_native_oauth_device_record(implemented_native):
-    root, storage, log, cache, hardware = implemented_native
-    raw = json.loads(storage.read_text())
-    del raw["iCubeAuthInfo://icube-dc:123456789"]
-    storage.write_text(json.dumps(raw))
-    with pytest.raises(NativeIdentityError, match="does not match"):
-        Account.from_native(device_id_source="get-device-id")
-
-
-@pytest.mark.parametrize("changed", ["token", "device"])
-def test_get_device_id_revalidates_selected_source_before_claim(implemented_native, changed):
-    from trae2api.aha_device_cache import DeviceRecord
-
-    root, storage, log, cache, hardware = implemented_native
+@pytest.mark.parametrize("changed", [{"token": "changed-token"}, {"userId": "changed-account"}])
+def test_account_device_source_stops_claim_if_credentials_change(native, monkeypatch, changed):
+    root, storage, log = native
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair",
+                        lambda user_id, device_id, client, version: ("saved-account-device", None))
     account = Account.from_native(device_id_source="get-device-id")
     seen = []
     def handler(request):
         seen.append(request.url.path)
-        if changed == "token":
-            update_auth(storage, token="changed-test-token")
-        else:
-            cache.save_device(DeviceRecord("111222333", "987654321", hardware.pc_uuid))
-            raw = json.loads(storage.read_text())
-            raw["iCubeAuthInfo://icube-dc:111222333"] = "synthetic-device-record"
-            storage.write_text(json.dumps(raw))
+        update_auth(storage, **changed)
         return httpx.Response(200, json={"enable": True, "checked_in": False})
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        with pytest.raises(CheckinError, match="changed"):
+        with pytest.raises(CheckinError, match="claim failed:.*changed"):
             checkin(account, client)
     assert seen == ["/trae/api/v2/ug/checkin_credits/status"]
 
 
-@pytest.mark.parametrize("source,expected", [("existing", "remote-test-device"), ("get-device-id", "123456789")])
-def test_cli_device_id_source_controls_sent_header(implemented_native, monkeypatch, source, expected):
+@pytest.mark.parametrize("source,expected", [("existing", "remote-test-device"),
+                                             ("get-device-id", "saved-account-device")])
+def test_cli_device_id_source_controls_sent_header(native, monkeypatch, source, expected):
+    monkeypatch.setattr("trae2api.app_storage.resolve_pair",
+                        lambda user_id, device_id, client, version: ("saved-account-device", None))
     seen = []
     def handler(request):
         seen.append(request)
@@ -287,7 +252,6 @@ def test_cli_device_id_source_controls_sent_header(implemented_native, monkeypat
     monkeypatch.setattr("trae2api.checkin.httpx.Client",
                         lambda **kwargs: client_class(transport=httpx.MockTransport(handler), **kwargs))
     assert main(["--native", "--device-id-source", source, "--status-only"]) == 0
-    assert len(seen) == 1
     assert seen[0].headers["x-device-id"] == expected
 
 
