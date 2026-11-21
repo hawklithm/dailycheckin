@@ -1,6 +1,26 @@
 # DailyCheckin
 
-DailyCheckin 是一个专注活动签到的 Python 库，目前支持 Trae CN 签到及签到状态查询，按账号保存设备配置和绑定。项目原名 trae2api；原有代理、登录命令、环境变量和本地数据仍可使用。
+DailyCheckin 是一个专注活动签到的 Python 库，目前支持 Trae CN 签到及签到状态查询，按账号保存设备配置和绑定。Trae 和 WorkBuddy 的登录态获取由 `buddy-agent-auth` 的品牌 provider 提供，Trae 的独立浏览器 OAuth 登录、设备注册和账号绑定也由认证包提供。项目原名 trae2api；旧代理和研究代码保留在源码中，但不包含在 DailyCheckin 发行包中。
+
+## 使用 uv 开发和构建
+
+当前开发版为 `0.1.1.dev1`。WorkBuddy 认证包尚未发布，因此首次从本地源码准备环境时，先将它构建到本项目 `dist`：
+
+```powershell
+# 在 DailyCheckin 项目目录执行；需要相邻的 WorkBuddy2API 源码
+uv build ..\workbuddy2api\packages\buddy-agent-auth --out-dir dist
+uv sync --extra workbuddy
+
+# 启动命令；去掉 --status-only/--execute 是不会读取凭据的 dry run
+uv run daily-checkin --native --device-id-source get-device-id --status-only
+uv run --extra workbuddy daily-checkin workbuddy --help
+
+# 运行测试、构建 sdist 和 wheel
+uv run --extra workbuddy pytest
+uv build --out-dir dist
+```
+
+生成的 `dist/daily_checkin-0.1.1.dev1-py3-none-any.whl` 可供 WorkBuddy2API 本地依赖；`dist/buddy_agent_auth-0.1.0-py3-none-any.whl` 用于当前开发环境解析 WorkBuddy 可选依赖。`dist` 中的包文件不提交到 Git，因此新检出仓库需要先构建认证 wheel，发布后再改为从包仓库解析。需要更新依赖时请增加 dev 版本号并重新构建。
 
 ## 签到快速开始
 
@@ -28,9 +48,44 @@ with httpx.Client(timeout=30, trust_env=False) as client:
     result = checkin(account, client, status_only=True)
 ```
 
-`--native` 读取原生账号和 token；默认的 `--device-id-source get-device-id` 使用项目中按账号保存的设备配置及绑定，不需要原生设备缓存或会话日志，默认地区为 CN（可用 `--user-region` 覆盖）。显式选择 `--device-id-source existing` 才使用并校验原生设备 ID 和日志地区。首次使用账号设备来源可能触发设备注册和激活；`--execute` 会在符合条件时请求领取。原有 `python -m trae2api.checkin` 入口及 `.traeapi` 账号设备数据继续沿用。设备激活与签到仍需真实环境验收。
+`--native` 读取原生账号和 token；默认的 `--device-id-source get-device-id` 使用项目中按账号保存的设备配置及绑定，不需要原生设备缓存或会话日志，默认地区为 CN（可用 `--user-region` 覆盖）。显式选择 `--device-id-source existing` 才使用并校验原生设备 ID 和日志地区。首次使用账号设备来源可能触发设备注册和激活；`--execute` 会在符合条件时请求领取。源码检出中的原有 `python -m trae2api.checkin` 入口及 `.traeapi` 账号设备数据继续沿用。发行包使用 `python -m daily_checkin`。设备激活与签到仍需真实环境验收。
 
-## 原有 trae2api 代理及研究记录
+## WorkBuddy 独立签到
+
+DailyCheckin 不需要运行 WorkBuddy2API，即可通过独立的 `buddy-agent-auth` 包读取并维护 WorkBuddy 账号。源码开发时先安装 WorkBuddy2API 仓库的认证包，再安装本项目：
+
+```powershell
+python -m pip install -e D:\workspace\workbuddy2api\packages\buddy-agent-auth
+python -m pip install -e ".[workbuddy]"
+
+python -m daily_checkin workbuddy login --global
+python -m daily_checkin workbuddy list
+python -m daily_checkin workbuddy status --account <账号ID>
+python -m daily_checkin workbuddy execute --account <账号ID>
+python -m daily_checkin workbuddy schedule
+```
+
+`--accounts-dir` 位于 `workbuddy` 与子命令之间；未指定时使用 `~/.workbuddy2api/accounts`。`schedule` 会持续运行并在启动及每日按计划检查，Ctrl+C 停止。签到前先查询，结果不确定时不重复领取。WorkBuddy2API 作为宿主时调用同一活动服务；两个进程共用账号目录时，通过持久化的 `daily-checkin-attempts.sqlite3` 防止同一账号当天的未知结果被重复提交。这个记录会保守地阻止重试，不能代替上游状态确认。
+
+目前这几个包尚未公开发布；独立安装示例需要本地认证包源码或其 wheel。真实 WorkBuddy 登录和签到尚未完成本次集成的线上验收。 WorkBuddy2API 的 `/v1/checkin` 和 `/v1/checkin-status` 兼容端点也由 DailyCheckin 提供，保持原有上游透传语义；其中 `/v1/checkin` 直接提交，不经过账号签到服务的状态预检或跨进程去重。管理界面和独立 `execute` 命令使用账号签到服务。
+
+### Trae CN 自动签到
+
+使用本机 Trae 登录态运行常驻调度器：
+
+```powershell
+uv run daily-checkin trae schedule --native --device-id-source get-device-id
+```
+
+独立登录凭据可使用 `uv run daily-checkin trae schedule --creds <凭据文件>`。启动时检查当天状态；跨日后先查状态，再在北京时间零点后的 0～10 分钟内随机安排签到。进程需要持续运行；按 `Ctrl+C` 停止。调度器固定启动时的账号，每次操作重新读取登录态；账号切换后需重启。设备已签到或签到结果未知时不会重复领取。
+
+如果希望随 WorkBuddy2API 一起启动，在启动它之前设置 `$env:DAILYCHECKIN_TRAE_NATIVE = "1"`；或者仅设置 `$env:DAILYCHECKIN_TRAE_CREDS = "凭据文件路径"` 使用独立凭据。可选的 `DAILYCHECKIN_TRAE_DEVICE_ID_SOURCE` 支持 `get-device-id`（默认）或 `existing`（仅本机登录态）。Trae 的开关与 WorkBuddy 自动签到开关独立。
+
+独立 Trae 登录可使用 `daily-checkin trae login`，默认凭据写入 `.traeapi/trae2api.json`；源码目录中已有旧凭据文件时继续使用旧文件，也可通过 `--creds` 指定。`TRAE2API_HOME` 仍可指定设备数据目录。
+
+## 原有 trae2api 代理及研究记录（仅源码）
+
+本节历史代理和研究代码不包含在 DailyCheckin 的 wheel 中；源码模式运行旧代理需要额外安装其依赖。
 
 TRAE CN IDE (3.4.7) 后端的 OpenAI 兼容代理。当前实现包含本地认证路径和 V1 chat upstream；历史结果曾报告文本请求成功，但远端模型选择及原生能力仍需按下方计划逐项验证。
 

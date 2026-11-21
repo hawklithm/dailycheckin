@@ -100,7 +100,7 @@ def test_storage_falls_back_when_profile_dirs_are_inaccessible(tmp_path, monkeyp
     project = tmp_path / 'project'
     (project / 'trae2api').mkdir(parents=True)
     monkeypatch.delenv('TRAE2API_HOME', raising=False)
-    monkeypatch.setattr(app_storage, '__file__', str(project / 'trae2api' / 'app_storage.py'))
+    monkeypatch.setattr(app_storage, '_fallback_project_root', project)
     monkeypatch.setattr(app_storage.Path, 'home', lambda: home)
     monkeypatch.setattr(app_storage, '_python_profile_home', lambda _: alternate)
     original_mkdir = Path.mkdir

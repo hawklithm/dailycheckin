@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 
 from trae2api import device_hardware as hw
-from trae2api import debuglog
+from buddy_agent_auth.providers.trae import diagnostics as debuglog
 
 
 @pytest.fixture

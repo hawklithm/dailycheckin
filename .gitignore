@@ -8,6 +8,11 @@ trae2api/trae2api.json
 trae2api/trace/
 
 # python
+/dist/*
+!/dist/.gitignore
+!/dist/.gitkeep
+build/
+*.egg-info/
 __pycache__/
 *.pyc
 *.pyo

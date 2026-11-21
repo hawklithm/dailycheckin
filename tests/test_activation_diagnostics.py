@@ -3,7 +3,7 @@ import json
 import httpx
 import pytest
 
-from trae2api import debuglog
+from buddy_agent_auth.providers.trae import diagnostics as debuglog
 from trae2api.aha_registration import Registration, activate
 from trae2api.device_hardware import Hardware
 
