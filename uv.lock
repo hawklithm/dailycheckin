@@ -55,10 +55,10 @@ wheels = [
 
 [[package]]
 name = "buddy-agent-auth"
-version = "0.1.0"
-source = { path = "dist/buddy_agent_auth-0.1.0-py3-none-any.whl" }
+version = "0.1.1"
+source = { path = "dist/buddy_agent_auth-0.1.1-py3-none-any.whl" }
 wheels = [
-    { filename = "buddy_agent_auth-0.1.0-py3-none-any.whl", hash = "sha256:d5cb768c3c555148f016e32bc812ce6ddd5ffa6219866df8d283c857a323dada" },
+    { filename = "buddy_agent_auth-0.1.1-py3-none-any.whl", hash = "sha256:a608dbedeae2b1b9ad7c1e007b36ec68bae19a337e0bfce01d9ecefce7b5768c" },
 ]
 
 [package.optional-dependencies]
@@ -275,7 +275,7 @@ wheels = [
 
 [[package]]
 name = "daily-checkin"
-version = "0.1.1.dev1"
+version = "0.1.2.dev1"
 source = { editable = "." }
 dependencies = [
     { name = "buddy-agent-auth", extra = ["trae"] },
@@ -296,8 +296,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "buddy-agent-auth", marker = "extra == 'workbuddy'", path = "dist/buddy_agent_auth-0.1.0-py3-none-any.whl" },
-    { name = "buddy-agent-auth", extras = ["trae"], path = "dist/buddy_agent_auth-0.1.0-py3-none-any.whl" },
+    { name = "buddy-agent-auth", marker = "extra == 'workbuddy'", path = "dist/buddy_agent_auth-0.1.1-py3-none-any.whl" },
+    { name = "buddy-agent-auth", extras = ["trae"], path = "dist/buddy_agent_auth-0.1.1-py3-none-any.whl" },
     { name = "fastapi", specifier = ">=0.100,<1" },
     { name = "httpx", specifier = ">=0.25,<1" },
 ]

@@ -1,0 +1,1268 @@
+{
+  "path": "%LOCALAPPDATA%\\Programs\\Trae CN\\resources\\app\\modules\\ai-agent\\ai_agent.dll",
+  "size": 277835152,
+  "sha256": "AAA884E34E98E543E030493B354E898E565050046BBB9ED236AB6139741741A7",
+  "imagebase": "0x180000000",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": "0x1000",
+      "raw_offset": "0x400",
+      "raw_size": "0x9746000"
+    },
+    {
+      "name": ".rdata",
+      "rva": "0x9747000",
+      "raw_offset": "0x9746400",
+      "raw_size": "0x67e5200"
+    },
+    {
+      "name": ".data",
+      "rva": "0xff2d000",
+      "raw_offset": "0xff2b600",
+      "raw_size": "0xf0800"
+    },
+    {
+      "name": ".pdata",
+      "rva": "0x1004a000",
+      "raw_offset": "0x1001be00",
+      "raw_size": "0x812e00"
+    },
+    {
+      "name": ".reloc",
+      "rva": "0x1085d000",
+      "raw_offset": "0x1082ec00",
+      "raw_size": "0xc5200"
+    }
+  ],
+  "targets": [
+    {
+      "literal": "api/agent/v3/llm_utils_chat",
+      "literal_utf8_length": 27,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xa4ce841",
+          "rva": "0xa4cf441",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": [
+        {
+          "instruction_rva": "0x65390a3",
+          "file_offset": "0x65384a3",
+          "target_rva": "0xa4cf441",
+          "bytes": "48 8d 15 97 63 f9 03",
+          "asm": "lea rdx, [rip + 0x3f96397]",
+          "containing_function": {
+            "begin_rva": "0x6538fd2",
+            "end_rva": "0x65392b4",
+            "unwind_rva": "0xfaa828c"
+          },
+          "function_calls": {
+            "range_bytes": 738,
+            "calls": [
+              {
+                "call_rva": "0x6539003",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653901a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539031",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539048",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653905f",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539076",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653908a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653909e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390b2",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390c6",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390da",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390ed",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539101",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539115",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539129",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653913d",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "literal": "api/agent/v3/create_agent_task",
+      "literal_utf8_length": 30,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xa4ce750",
+          "rva": "0xa4cf350",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": [
+        {
+          "instruction_rva": "0x6538ff1",
+          "file_offset": "0x65383f1",
+          "target_rva": "0xa4cf350",
+          "bytes": "48 8d 15 58 63 f9 03",
+          "asm": "lea rdx, [rip + 0x3f96358]",
+          "containing_function": {
+            "begin_rva": "0x6538fd2",
+            "end_rva": "0x65392b4",
+            "unwind_rva": "0xfaa828c"
+          },
+          "function_calls": {
+            "range_bytes": 738,
+            "calls": [
+              {
+                "call_rva": "0x6539003",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653901a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539031",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539048",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653905f",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539076",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653908a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653909e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390b2",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390c6",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390da",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390ed",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539101",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539115",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539129",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653913d",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "literal": "api/agent/v3/workflow/start",
+      "literal_utf8_length": 27,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xa4ce85c",
+          "rva": "0xa4cf45c",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": [
+        {
+          "instruction_rva": "0x65390b7",
+          "file_offset": "0x65384b7",
+          "target_rva": "0xa4cf45c",
+          "bytes": "48 8d 15 9e 63 f9 03",
+          "asm": "lea rdx, [rip + 0x3f9639e]",
+          "containing_function": {
+            "begin_rva": "0x6538fd2",
+            "end_rva": "0x65392b4",
+            "unwind_rva": "0xfaa828c"
+          },
+          "function_calls": {
+            "range_bytes": 738,
+            "calls": [
+              {
+                "call_rva": "0x6539003",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653901a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539031",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539048",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653905f",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539076",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653908a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653909e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390b2",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390c6",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390da",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65390ed",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539101",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539115",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539129",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653913d",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "literal": "api/ide/v2/llm_raw_chat",
+      "literal_utf8_length": 23,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xa4cec00",
+          "rva": "0xa4cf800",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": [
+        {
+          "instruction_rva": "0x6539a1c",
+          "file_offset": "0x6538e1c",
+          "target_rva": "0xa4cf800",
+          "bytes": "48 8d 15 dd 5d f9 03",
+          "asm": "lea rdx, [rip + 0x3f95ddd]",
+          "containing_function": {
+            "begin_rva": "0x6539804",
+            "end_rva": "0x653a758",
+            "unwind_rva": "0xfaa8514"
+          },
+          "function_calls": {
+            "range_bytes": 3924,
+            "calls": [
+              {
+                "call_rva": "0x6539879",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539890",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65398a7",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65398be",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65398d5",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65398ec",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539903",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653991a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539931",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539948",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653995f",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539976",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x653998d",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65399a4",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65399bb",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65399d2",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x65399e9",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a00",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a17",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a2e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a45",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a5c",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a73",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539a8a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539aa1",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ab8",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539acf",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ae6",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539afd",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b14",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b2b",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b42",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b59",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b70",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b87",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539b9e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539bb5",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539bcc",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539be3",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539bfa",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c11",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c28",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c3f",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c56",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c6d",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c84",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539c9b",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539cb2",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539cc9",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ce0",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539cf7",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d0e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d25",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d3c",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d53",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d6a",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d81",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539d98",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539daf",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539dc6",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ddd",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539df4",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e0b",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e22",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e39",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e50",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e67",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e7e",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539e95",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539eac",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ec3",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539eda",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539ef1",
+                "target_rva": "0x63e4cc3",
+                "target_function": {
+                  "begin_rva": "0x63e4cc3",
+                  "end_rva": "0x63e4d37",
+                  "unwind_rva": "0xe5c900c"
+                }
+              },
+              {
+                "call_rva": "0x6539efa",
+                "target_rva": "0x6538fd2",
+                "target_function": {
+                  "begin_rva": "0x6538fd2",
+                  "end_rva": "0x65392b4",
+                  "unwind_rva": "0xfaa828c"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Only the explicitly supplied route literals and exact pointer+length pairs are searched.",
+    "Code xrefs are limited to Capstone-validated RIP-relative LEA/MOV instructions.",
+    "No code is executed and no function is fully disassembled outside xref-containing ranges."
+  ],
+  "explicit_candidate_rva_code_refs": []
+}

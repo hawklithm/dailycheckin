@@ -7,10 +7,15 @@ trae2api/trae2api.json
 # trace logs contain conversation content
 trae2api/trace/
 
+# Local IDE files and temporary installer/test output
+/.idea/
+/pip-build-tracker-*/
+/pip-unpack-*/
+/pytest-of-*/
+.pytest_cache/
+
 # python
-/dist/*
-!/dist/.gitignore
-!/dist/.gitkeep
+/dist/
 build/
 *.egg-info/
 __pycache__/
