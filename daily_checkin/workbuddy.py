@@ -130,6 +130,12 @@ class AccountCheckinService:
                 "status",
                 "http_status",
                 "next_checkin_at",
+                "brand",
+                "stage",
+                "error_type",
+                "failure_category",
+                "business_code",
+                "outcome",
             }
             and (value is None or isinstance(value, (str, int, float, bool)))
         }

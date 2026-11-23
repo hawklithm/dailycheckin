@@ -144,7 +144,8 @@ def _read_status(account: Account, client: httpx.Client) -> dict[str, Any]:
 
 
 def checkin(account: Account, client: httpx.Client, *, status_only: bool = False,
-            before_claim: Callable[[], bool] | None = None) -> dict[str, Any]:
+            before_claim: Callable[[], bool] | None = None,
+            diagnostic: Callable[..., None] | None = None) -> dict[str, Any]:
     """Query, claim once if eligible, then verify status without retrying claim."""
     if account.native_identity is not None:
         try:
@@ -153,12 +154,20 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
             raise CheckinError(str(exc)) from None
     if account.native_identity is None or getattr(account.native_identity, "device_id_source", "get-device-id") != "existing":
         from buddy_agent_auth.providers.trae.app_storage import resolve_pair
-        device_id, hardware = resolve_pair(account.user_id, account.device_id, client, account.app_version)
+        try:
+            device_id, hardware = resolve_pair(account.user_id, account.device_id, client, account.app_version)
+        except Exception as exc:
+            _report_failure(diagnostic, 'device_resolution', exc)
+            raise
         account = replace(account, device_id=device_id)
         if hardware is not None:
             account = replace(account, device_brand=clean_model(hardware.model),
                               device_type=hardware.os_name, os_version=hardware.os_version)
-    status = _read_status(account, client)
+    try:
+        status = _read_status(account, client)
+    except Exception as exc:
+        _report_failure(diagnostic, 'status_query', exc)
+        raise
     if status_only:
         return {"action": "status", **status}
     if status["checked_in"]:
@@ -173,11 +182,13 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
     try:
         _post(client, CLAIM_PATH, account)
     except CheckinError as exc:
+        _report_failure(diagnostic, 'claim', exc)
         raise CheckinError(f"claim failed: {exc}") from exc
     result = {"action": "claim_accepted", "credits": status.get("credits"), "verified": False}
     try:
         after = _read_status(account, client)
     except CheckinError as exc:
+        _report_failure(diagnostic, 'claim_verification', exc)
         # A failed confirmation must not cause a second claim.
         result["verification_error"] = str(exc)
         return result
@@ -185,6 +196,16 @@ def checkin(account: Account, client: httpx.Client, *, status_only: bool = False
     if after["checked_in"]:
         result.update(action="checked_in", verified=True)
     return result
+
+
+def _report_failure(diagnostic, stage: str, exc: Exception) -> None:
+    if diagnostic is None:
+        return
+    from .trae_diagnostics import safe_error_fields
+    try:
+        diagnostic(stage=stage, **safe_error_fields(exc))
+    except Exception:
+        pass  # Logging must not alter check-in behavior.
 
 
 def main(argv: list[str] | None = None) -> int:

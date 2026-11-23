@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 from dataclasses import replace
+from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
@@ -13,6 +15,7 @@ import httpx
 from buddy_agent_auth.providers.trae.app_storage import root
 
 from . import trae
+from .trae_diagnostics import safe_error_fields
 from .workbuddy import AccountCheckinService
 
 
@@ -52,20 +55,39 @@ class TraeCheckinService(AccountCheckinService):
         super().__init__(_Manager(account_id, Path(directory)), **kwargs)
         self._load_account = load_account
         self._client_factory = client_factory or (lambda: httpx.Client(timeout=30, trust_env=False))
+        self._diagnostic_account_id = 'trae_' + hashlib.sha256(account_id.encode()).hexdigest()[:16]
 
-    def _operation(self, account_id: str, *, status_only: bool, before_claim=None):
-        account = self._load_account()
-        if account.user_id != account_id:
-            raise ValueError('Trae account changed; restart the scheduler')
+    def set_diagnostic_account_id(self, account_id: str) -> None:
+        # Host account IDs are opaque 32-character hex identifiers.
+        if isinstance(account_id, str) and len(account_id) == 32 and all(c in '0123456789abcdef' for c in account_id):
+            self._diagnostic_account_id = account_id
+
+    def _log(self, event: str, **fields) -> None:
+        fields['brand'] = 'trae_cn'
+        if 'account_id' in fields:
+            fields['account_id'] = self._diagnostic_account_id
+        super()._log(event, **fields)
+
+    def _operation(self, account_id: str, *, status_only: bool, before_claim=None, reason='manual'):
+        try:
+            account = self._load_account()
+            if account.user_id != account_id:
+                raise ValueError('Trae account changed; restart the scheduler')
+        except Exception as exc:
+            self._log('trae_checkin_failure', account_id=account_id, date=self._today(),
+                      reason=reason, stage='load_account', **safe_error_fields(exc))
+            raise
         with self._client_factory() as client:
-            return trae.checkin(account, client, status_only=status_only, before_claim=before_claim)
+            return trae.checkin(account, client, status_only=status_only, before_claim=before_claim,
+                diagnostic=lambda **fields: self._log('trae_checkin_failure', account_id=account_id,
+                    date=self._today(), reason=reason, **fields))
 
     async def _check_status_locked(self, account_id: str, reason: str):
         state = self._state(account_id)
         state.update(status='checking', checked=None, error=None)
         try:
             async with self._semaphore:
-                result = await asyncio.to_thread(self._operation, account_id, status_only=True)
+                result = await asyncio.to_thread(self._operation, account_id, status_only=True, reason=reason)
             state['last_checked_at'] = self._epoch()
             if result['checked_in']:
                 state.update(status='checked', checked=True, error=None, next_checkin_at=None)
@@ -79,8 +101,10 @@ class TraeCheckinService(AccountCheckinService):
         except asyncio.CancelledError:
             state.update(status='unknown', checked=None, error=None, next_checkin_at=None)
             raise
-        except Exception:
+        except Exception as exc:
             self._set_error(state, '签到状态查询失败')
+            self._log('trae_checkin_failure', account_id=account_id, date=state['date'], reason=reason,
+                      stage='status_operation', **safe_error_fields(exc))
         self._log('trae_checkin_status_checked', account_id=account_id, date=state['date'],
                   reason=reason, status=state['status'])
         return dict(state)
@@ -93,41 +117,54 @@ class TraeCheckinService(AccountCheckinService):
         status = await self._check_status_locked(account_id, reason)
         state = self._state(account_id)
         if status['status'] != 'unchecked' or not self._before_post_allowed(account_id, target_date, require_enabled):
+            self._log('trae_checkin_skipped', account_id=account_id, date=target_date, reason=reason,
+                      stage='precheck', status=state['status'])
             return dict(state)
         marker = (account_id, target_date)
         with self._state_guard:
             if marker in self._post_started:
                 self._set_error(state, '签到结果未确认')
+                self._log('trae_checkin_skipped', account_id=account_id, date=target_date, reason=reason,
+                          stage='attempt_ledger', outcome='already_attempted')
                 return dict(state)
             self._post_started.add(marker)
         # Use a brand prefix even when host applications share an account store.
         ledger_id = 'trae-cn:' + account_id
         try:
             claimed = await asyncio.to_thread(self._attempt_ledger, ledger_id, target_date)
-        except (OSError, sqlite3.Error):
+        except (OSError, sqlite3.Error) as exc:
             self._set_error(state, '签到结果未确认')
+            self._log('trae_checkin_failure', account_id=account_id, date=target_date, reason=reason,
+                      stage='attempt_ledger', **safe_error_fields(exc))
             return dict(state)
         if not claimed:
             self._set_error(state, '签到结果未确认')
+            self._log('trae_checkin_skipped', account_id=account_id, date=target_date, reason=reason,
+                      stage='attempt_ledger', outcome='already_attempted')
             return dict(state)
         state.update(status='signing', checked=False, error=None, next_checkin_at=None)
         try:
             async with self._semaphore:
                 result = await asyncio.to_thread(
                     self._operation, account_id, status_only=False,
+                    reason=reason,
                     before_claim=lambda: self._before_post_allowed(account_id, target_date, require_enabled))
         except asyncio.CancelledError:
             state.update(status='unknown', checked=None, error=None, next_checkin_at=None)
             raise
-        except Exception:
+        except Exception as exc:
             self._set_error(state, '签到结果未确认')
+            self._log('trae_checkin_failure', account_id=account_id, date=target_date, reason=reason,
+                      stage='claim_operation', **safe_error_fields(exc))
             return dict(state)
         action = result.get('action')
         if action in {'cancelled', 'already_checked_in', 'device_already_checked_in', 'disabled'}:
             try:
                 await asyncio.to_thread(self._attempt_ledger, ledger_id, target_date, clear=True)
-            except (OSError, sqlite3.Error):
+            except (OSError, sqlite3.Error) as exc:
                 self._set_error(state, '签到结果未确认')
+                self._log('trae_checkin_failure', account_id=account_id, date=target_date, reason=reason,
+                          stage='attempt_ledger_clear', **safe_error_fields(exc))
                 return dict(state)
             with self._state_guard:
                 self._post_started.discard(marker)
@@ -144,8 +181,9 @@ class TraeCheckinService(AccountCheckinService):
             self._set_error(state, '签到活动未开放')
         elif action != 'cancelled':
             self._set_error(state, '签到结果未确认')
+        known = {'cancelled', 'checked_in', 'already_checked_in', 'device_already_checked_in', 'disabled', 'claim_accepted'}
         self._log('trae_checkin_finished', account_id=account_id, date=target_date,
-                  reason=reason, status=state['status'])
+                  reason=reason, status=state['status'], outcome=action if action in known else 'unknown')
         return dict(state)
 
 
@@ -197,12 +235,16 @@ def main(argv=None):
                                  device_id_source=args.device_id_source or 'get-device-id',
                                  base_url=args.base_url, user_region=args.user_region)
         service.configure_logging(lambda event, **fields: print(json.dumps(
-            {'event': event, **fields}, ensure_ascii=False), flush=True))
+            {'timestamp': datetime.now(timezone.utc).isoformat(), 'event': event, **fields},
+            ensure_ascii=False), flush=True))
         try:
             asyncio.run(_run_scheduler(service))
         except KeyboardInterrupt:
             return 0
         return 0
     except (OSError, ValueError, TypeError, KeyError) as exc:
-        print(f'Trae scheduler failed: {exc}')
+        print(json.dumps({'timestamp': datetime.now(timezone.utc).isoformat(),
+                          'event': 'trae_checkin_failure', 'brand': 'trae_cn',
+                          'reason': 'startup', 'stage': 'service_init',
+                          **safe_error_fields(exc)}, ensure_ascii=False))
         return 1

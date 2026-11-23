@@ -1,11 +1,14 @@
 """Multi-account Trae check-in coordination for host applications."""
 from __future__ import annotations
 import asyncio
+import hashlib
 import json
+import logging
 from buddy_agent_auth.providers.codebuddy.login_jobs import AccountManagerError
 from buddy_agent_auth.providers.trae.accounts import TraeAccountAuth
 from buddy_agent_auth.providers.codebuddy.account_store import _atomic_json
 from .workbuddy_api import safe_checkin
+from .trae_diagnostics import safe_error_fields
 
 def _safe_trae_checkin(value):
     if value is None:
@@ -25,6 +28,27 @@ class TraeCheckinAccounts:
         self.started = False
         self.loop = None
         self.async_lock = asyncio.Lock()
+        self._checkin_logging_callback = None
+
+    def configure_logging(self, callback):
+        self._checkin_logging_callback = callback
+        for service in self.services.values():
+            configure = getattr(service, 'configure_logging', None)
+            if callable(configure):
+                configure(callback)
+
+    def _log_service(self, event, account_id, reason, **fields):
+        safe_id = account_id if (isinstance(account_id, str) and len(account_id) == 32 and
+                                  all(c in '0123456789abcdef' for c in account_id)) else (
+            'trae_' + hashlib.sha256(str(account_id).encode()).hexdigest()[:16])
+        details = {'brand': 'trae_cn', 'account_id': safe_id, 'reason': reason, **fields}
+        try:
+            if self._checkin_logging_callback is not None:
+                self._checkin_logging_callback(event, **details)
+            else:
+                logging.getLogger(__name__).warning('%s %s', event, details)
+        except Exception:
+            pass
 
     def _settings(self):
         path = self.root / 'settings.json'
@@ -51,28 +75,50 @@ class TraeCheckinAccounts:
         async with self.async_lock:
             self.started = True
             self.loop = asyncio.get_running_loop()
-            if self._settings():
+            try:
+                enabled = self._settings()
+            except Exception as exc:
+                self._log_service('trae_checkin_failure', 'configuration', 'startup',
+                                  stage='settings_load', **safe_error_fields(exc))
+                raise
+            if enabled:
                 for record in self._records():
                     try:
-                        await self._service(record)
+                        await self._service(record, reason='startup')
                     except Exception:
                         pass
 
-    async def _service(self, record):
+    async def _service(self, record, reason='manual'):
         account_id = record['id']
         service = self.services.get(account_id)
         if service is None:
-            from daily_checkin.trae_scheduler import create_service
-            service = await asyncio.to_thread(create_service, creds=str(self._path(account_id) / 'credentials.json'))
-            if service.manager.store.account_id != record['uid']:
-                raise ValueError('account mismatch')
+            service = None
             try:
-                if self.started and self._settings():
+                from daily_checkin.trae_scheduler import create_service
+                service = await asyncio.to_thread(create_service, creds=str(self._path(account_id) / 'credentials.json'))
+                if service.manager.store.account_id != record['uid']:
+                    raise ValueError('account mismatch')
+                identify = getattr(service, 'set_diagnostic_account_id', None)
+                if callable(identify):
+                    identify(account_id)
+                configure = getattr(service, 'configure_logging', None)
+                if callable(configure):
+                    configure(self._checkin_logging_callback)
+                should_start = self.started and self._settings()
+                if should_start:
                     await service.start()
-            except Exception:
-                await service.close()
+            except Exception as exc:
+                if service is not None:
+                    try:
+                        await service.close()
+                    except Exception:
+                        pass
+                self._log_service('trae_checkin_failure', account_id, reason,
+                                  stage='service_init', **safe_error_fields(exc))
                 raise
             self.services[account_id] = service
+            self._log_service('trae_checkin_service_ready', account_id, reason,
+                              stage='service_init', status='started' if should_start else 'ready')
         return service
 
     async def ensure_scheduled(self, account_id):
@@ -81,7 +127,7 @@ class TraeCheckinAccounts:
                 record = next((r for r in self._records() if r['id'] == account_id), None)
                 if record:
                     try:
-                        await self._service(record)
+                        await self._service(record, reason='login')
                     except Exception:
                         pass
 
@@ -94,7 +140,9 @@ class TraeCheckinAccounts:
                 service = await self._service(record)
                 result = await (service.check_in(record['uid'], reason='manual') if claim else service.check_status(record['uid'], reason='manual'))
                 return _safe_trae_checkin(result)
-            except Exception:
+            except Exception as exc:
+                self._log_service('trae_checkin_failure', account_id, 'manual',
+                                  stage='manual_action', **safe_error_fields(exc))
                 raise AccountManagerError('签到请求失败，请检查登录状态', status_code=502) from None
 
     async def set_auto(self, enabled):
@@ -106,7 +154,7 @@ class TraeCheckinAccounts:
             if enabled and self.started:
                 for record in self._records():
                     try:
-                        await self._service(record)
+                        await self._service(record, reason='enable')
                     except Exception:
                         pass
             return {'auto_checkin_enabled': enabled}

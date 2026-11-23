@@ -7,6 +7,7 @@ import pytest
 
 from daily_checkin.trae import Account, CLAIM_PATH, STATUS_PATH
 from daily_checkin.trae_scheduler import TraeCheckinService
+from daily_checkin.trae_diagnostics import safe_error_fields
 
 
 @pytest.fixture(autouse=True)
@@ -111,3 +112,99 @@ def test_claim_gate_prevents_request(tmp_path, monkeypatch):
         await service.close()
     asyncio.run(scenario())
     assert CLAIM_PATH not in paths
+
+
+@pytest.mark.parametrize('failure,expected', [
+    (httpx.ReadTimeout('secret-token sensitive-url'), ('status_query', 'timeout', None)),
+    (httpx.Response(503, text='secret-token'), ('status_query', 'http_status', 503)),
+    (httpx.Response(200, json={'code': 987, 'message': 'secret-token'}), ('status_query', 'business_error', None)),
+])
+def test_status_failure_logs_stage_and_safe_fields(tmp_path, failure, expected):
+    events = []
+    def handler(request):
+        if isinstance(failure, Exception):
+            raise failure
+        return failure
+    async def scenario():
+        service = make_service(tmp_path, handler,
+            load=lambda: Account('secret-token', 'secret-device', user_id='private-user'))
+        service.manager.store.account_id = 'private-user'
+        service.configure_logging(lambda event, **fields: events.append((event, fields)))
+        try:
+            assert (await service.check_status('private-user', reason='midnight'))['status'] == 'error'
+        finally:
+            await service.close()
+    asyncio.run(scenario())
+    event = next(fields for name, fields in events if name == 'trae_checkin_failure' and fields['stage'] == expected[0])
+    assert event['error_type'] == expected[1]
+    assert event.get('http_status') == expected[2]
+    assert event['reason'] == 'midnight'
+    assert event['brand'] == 'trae_cn'
+    assert event['account_id'].startswith('trae_')
+    if expected[1] == 'business_error':
+        assert event['business_code'] == 987
+    serialized = repr(events)
+    assert all(secret not in serialized for secret in ('secret-token', 'secret-device', 'private-user', 'sensitive-url'))
+
+
+def test_device_failure_identifies_stage_without_exception_message(tmp_path, monkeypatch):
+    def fail(*args):
+        raise ValueError('private device secret')
+    monkeypatch.setattr('buddy_agent_auth.providers.trae.app_storage.resolve_pair', fail)
+    events = []
+    async def scenario():
+        service = make_service(tmp_path, lambda request: pytest.fail('unexpected request'))
+        service.configure_logging(lambda event, **fields: events.append((event, fields)))
+        try:
+            assert (await service.check_status('user1'))['status'] == 'error'
+        finally:
+            await service.close()
+    asyncio.run(scenario())
+    assert any(data.get('stage') == 'device_resolution' and data.get('error_type') == 'value_error'
+               for _, data in events)
+    assert 'private device secret' not in repr(events)
+
+
+def test_duplicate_attempt_records_safe_skip_reason(tmp_path):
+    events = []
+    def handler(request):
+        if request.url.path == CLAIM_PATH:
+            raise httpx.ReadTimeout('private message')
+        return httpx.Response(200, json={'enable': True, 'checked_in': False})
+    async def scenario():
+        for _ in range(2):
+            service = make_service(tmp_path, handler)
+            service.configure_logging(lambda event, **fields: events.append((event, fields)))
+            assert (await service.check_in('user1'))['status'] == 'error'
+            await service.close()
+    asyncio.run(scenario())
+    assert any(name == 'trae_checkin_skipped' and fields.get('outcome') == 'already_attempted'
+               for name, fields in events)
+    assert 'private message' not in repr(events)
+
+
+@pytest.mark.parametrize('message,category,error_type,status', [
+    ('login token expired; sign in to Trae again', 'authentication', 'token_expired', None),
+    ('Trae account changed; restart the scheduler', 'authentication', 'account_mismatch', None),
+    ('device activation was not confirmed', 'device', 'device_activation_unconfirmed', None),
+    ('invalid device_pair.json; refusing to overwrite it', 'storage', 'device_pair_invalid', None),
+    ('device registration failed: HTTP 503', 'upstream', 'device_registration_http_error', 503),
+    ('device activation network error (ReadTimeout); not retried', 'network', 'timeout', None),
+])
+def test_known_local_errors_have_safe_categories(message, category, error_type, status):
+    fields = safe_error_fields(ValueError(message))
+    assert fields['failure_category'] == category
+    assert fields['error_type'] == error_type
+    assert fields.get('http_status') == status
+    assert message not in repr(fields)
+
+
+def test_cli_startup_failure_does_not_print_private_exception(monkeypatch, capsys):
+    from daily_checkin import trae_scheduler
+    def fail(**kwargs):
+        raise ValueError('private-credential-path secret-token')
+    monkeypatch.setattr(trae_scheduler, 'create_service', fail)
+    assert trae_scheduler.main(['--creds', 'dummy.json']) == 1
+    output = capsys.readouterr().out
+    assert 'service_init' in output and 'value_error' in output
+    assert 'private-credential-path' not in output and 'secret-token' not in output
