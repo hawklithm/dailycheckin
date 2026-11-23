@@ -1,9 +1,9 @@
-name: Publish daily-checkin distribution
+name: Publish buddy-agent-checkin distribution
 
 on:
   push:
     tags:
-      - 'daily-checkin-v*'
+      - 'buddy-agent-checkin-v*'
 
 permissions:
   contents: read
@@ -25,7 +25,7 @@ jobs:
         run: |
           python - <<'PY'
           import os, pathlib, re, tomllib
-          prefix = 'daily-checkin-v'
+          prefix = 'buddy-agent-checkin-v'
           tag = os.environ['RELEASE_TAG']
           version = tomllib.loads(pathlib.Path('./pyproject.toml').read_text(encoding='utf-8'))['project']['version']
           if tag != prefix + version or not re.fullmatch(r'\d+\.\d+\.\d+', version):
@@ -35,7 +35,7 @@ jobs:
       - run: python -m twine check dist/*
       - uses: actions/upload-artifact@v4
         with:
-          name: daily-checkin-distribution
+          name: buddy-agent-checkin-distribution
           path: dist/
           if-no-files-found: error
 
@@ -44,13 +44,13 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/daily-checkin
+      url: https://pypi.org/p/buddy-agent-checkin
     permissions:
       id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: daily-checkin-distribution
+          name: buddy-agent-checkin-distribution
           path: dist/
       - uses: pypa/gh-action-pypi-publish@release/v1
 
@@ -66,7 +66,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           PIP_INDEX_URL: https://pypi.org/simple
         run: |
-          VERSION="${RELEASE_TAG#daily-checkin-v}"
-          python -m pip install --no-cache-dir "daily-checkin[workbuddy]==$VERSION"
-          python -c "import importlib, importlib.metadata as m, os; name='daily-checkin'; expected=os.environ['RELEASE_TAG'].removeprefix('daily-checkin-v'); assert m.version(name)==expected; importlib.import_module('daily_checkin.trae_scheduler'); print(name, m.version(name))"
+          VERSION="${RELEASE_TAG#buddy-agent-checkin-v}"
+          python -m pip install --no-cache-dir "buddy-agent-checkin[workbuddy]==$VERSION"
+          python -c "import importlib, importlib.metadata as m, os; name='buddy-agent-checkin'; expected=os.environ['RELEASE_TAG'].removeprefix('buddy-agent-checkin-v'); assert m.version(name)==expected; importlib.import_module('daily_checkin.trae_scheduler'); print(name, m.version(name))"
           python -m pip check
