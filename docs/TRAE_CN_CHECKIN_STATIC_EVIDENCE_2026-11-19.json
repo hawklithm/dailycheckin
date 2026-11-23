@@ -1,0 +1,99 @@
+{
+  "kind": "static_bundle_inspection_not_network_capture",
+  "app_version": "3.4.20",
+  "offset_unit": "zero-based Unicode character index after UTF-8 decoding",
+  "files": {
+    "main": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "sha256": "433e32bd7821ab4b05e46be1fc1b74043315884ba3ec58c45c99d94f58fd6816"
+    },
+    "workbench": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "sha256": "ef45a1c374921209589a69ce36bcda89855f569a2ac15e04f92996d8c1101edc"
+    },
+    "product": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\product.json",
+      "sha256": "c1cb3a485464a0dcf2fb5e0361d49504ab2d6a70a3522b8b531e7f9db3408ccf"
+    }
+  },
+  "sections": [
+    {
+      "name": "ui_gate",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "character_offset": 13633559,
+      "excerpt": "async claimIdeCheckinCredits(e){const t=this.O;if(!this.Eb()||t.readiness!==\"ready\"||t.enable!==!0||t.checkedIn!==!1||t.didCheckedIn===!0||t.businessFailure)return!1;if(this.Y)return this.Y;const s=this.j?.userId,n=this.db,r=zz(this.getCurrentServerTime()??Date.now());this.Db({claiming:!0}),this.reportTea(\"checkin_credits\",{type:\"click\",source:e,checked_in:0,did_checked_in:0});const o=(async()=>{let a=\"network\",c,l;try{const h=await this.claimCheckinCredits(e),u=h.beijingDayKey??r,f=h.data,g=f!=null&&Object.prototype.hasOwnProperty.call(f,\"code\"),p=g?f?.code:void 0;if(l=typeof f?.message==\"string\"?f.message:void 0,h.status!==200)throw a=\"http\",new Error(`Checkin claim failed with HTTP ${h.status}`);if(g&&typeof p!=\"number\")throw a=\"protocol\",new Error(\"Checkin claim returned an invalid business code\");if(typeof p==\"number\"&&p!==0)throw a=\"business\",c=p,n===this.db&&s===this.j?.userId&&u===zz(this.getCurrentServerTime()??Date.now())&&this.Db({businessFailure:{code:p,message:l,beijingDayKey:u}}),new Error(\"Checkin claim failed\");return n!==this.db||s!==this.j?.userId?!1:(u===zz(this.getCurrentServerTime()??Date.now())&&this.Db({readiness:\"ready\",checkedIn:!0,didCheckedIn:!0,claiming:!1,beijingDayKey:u}),this.zb().then(([m,b])=>{this.reportTea(\"checkin_credits\",{type:\"success\",source:e,checked_in:1,did_checked_in:1,status_refresh_result:m.status,credits_refresh_result:b.status})}),!0)}catch(h){return n!==this.db||s!==this.j?.userId||(this.pb.warn(\"[CheckinCredits] claim failed\",{source:e,failureStage:a,businessCode:c,serverMessage:l,error:h instanceof Error?h.message:String(h)}),this.reportTea(\"checkin_credits\",{type:\"fail\",source:e,checked_in:0,did_checked_in:t.didCheckedIn?1:0,failure_stage:a,business_code:c}),this.n?.error(lTs(c,a===\"business\"?l:void 0))),!1}finally{n===this.db&&s===this.j?.userId&&this.Db({claiming:!1})}})();this.Y=o;try{return await o}finally{this.Y===o&&(this.Y=void 0)}}queryCommercialActivityInfo(){return xt.invoke(Ci.SANDBOX_TO_MAIN_INVOKE_QUERY_COMMERCIAL_ACTIVITY_INFO)}handleCommercialActivity(e,t){return xt.invoke(Ci.SANDBOX_TO_MAIN_INVOKE_HANDLE_COMMERCIAL_ACTIVITY,e,t)}getCurrentServerTime(){if(!this.F)return;const{serverTime:e,lastSyncTime:t}=this.F,s=Date.now()-t;return e+s}getActivityStatus(e){if(!this.I)return;const t=this.getCurrentServerTime(),s=this.I.activities.find(n=>n.activityId===e);if(!(!s||!t))return t<s.startTime?KG.Upcoming:t>s.endTime?KG.Expired:KG.Active}isActivityActive(e){return this.getActivityStatus(e)===KG.Active}async getCommercialActivities(e){return e?(await this.refreshServerData(!0))?.commercialActivityInfo:(await this.h.p,this.I?this.I:(await this.refreshServerData())?.commercialActivityInfo)}Hb(e){const t=this.F?.serverTime;if(this.F=e,this.c.acceptServerTime(),!e)return;const s=Date.now(),n=60*60*1e3,r=5*1e3,o=Math.abs(e.serverTime-(this.getCurrentServerTime()||0))>=r,a=s-this.H>=n;(!t||a||o"
+    },
+    {
+      "name": "ui_ipc",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "character_offset": 13628366,
+      "excerpt": "claimCheckinCredits(e){return xt.invoke(Ci.SANDBOX_TO_MAIN_INVOKE_CLAIM_CHECKIN_CREDITS,e)}zb(){if(this.Z)return this.Z;const e=this.db,t=this.j?.userId,s=(async()=>{const[n,r]=await Promise.allSettle"
+    },
+    {
+      "name": "ui_error_map",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "character_offset": 13617267,
+      "excerpt": "function lTs(i,e){switch(i){case 1002:return d(2356,null);case 2001:return d(2357,null);case 9004:return d(2358,null);case 9090:return d(2359,null);case 9093:return d(2360,null);case 9095:return d(2361,null);default:return e||d(2362,null)}}function zz(i){return new Date(i+M$r).toISOString().slice(0,10)}function hTs(i=0){return{readiness:\"idle\",claiming:!1,re"
+    },
+    {
+      "name": "ipc_handler",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1985789,
+      "excerpt": "J.handle(ne.SANDBOX_TO_MAIN_INVOKE_CLAIM_CHECKIN_CREDITS,(e,i)=>{const s=B1e.fromWebContents(e.sender),r=i===\"account_menu\"||i===\"banner_popup\"||i===\"sidebar_banner\";return this.claimCheckinCredits(s&&!s.isDestroyed()&&r?{windowId:s.id,source:i}:void 0)}),J.handle(ne.SANDBOX_TO_MAIN_INVOKE_GET_CHECKIN_LOTTERY,(e,i)=>this.getCheckinLotteryController().refresh({checkin:i?.checkin===!0})),J.handle(ne.SANDBOX_TO_MAIN_INVOKE_PARTICIPATE_CHECKIN_LOTTERY,async(e,i)=>{const s=B1e.fromWebContents(e.sender);return!s||s.isDestroyed()||i!==\"account_menu\"&&"
+    },
+    {
+      "name": "request",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1991012,
+      "excerpt": "async mb(e,i,s,r,n){const o=n?.generation??this.C,a=n?.userId??this.f?.userId;n&&this.q(n);const c=r?this.f:await this.R.getAuthUserInfo();if(this.X.providerCode!==Jr.CN||c?.account.scope!==gt.MARSCODE)throw new Error(\"Checkin credits is unavailable\");const l=await this.Z.getApi(mn.ugApi,e),d=this.jb(c.token);this.ob(d.headers);const u=ii(this.X)?2:1,p=Date.now();try{if(o!==this.C||a!==this.f?.userId||c?.userId!==a)throw new Error(\"Checkin account is no longer active\");this.s(r);const w=await this.Y.fetchWithHeaders({url:l,method:i,data:i===\"POST\"?{req_source:u}:void 0,timeout:3e4,...d,...s===\"checkin_claim\"||r?{retry:0}:{}});let f=\"none\",m;w.status!==200?f=\"http\":s===\"checkin_status\"?(typeof w.data?.enable!=\"boolean\"||typeof w.data.checked_in!=\"boolean\")&&(f=\"protocol\"):w.data&&Object.prototype.hasOwnProperty.call(w.data,\"code\")&&(typeof w.data.code!=\"number\"?f=\"protocol\":w.data.code!==0&&(f=\"business\",m=w.data.code)),this.bb({apiName:s,endpointVariant:\"shared\",trigger:\"unknown\",result:f===\"none\"?\"success\":\"fail\",failureStage:f,durationMs:Date.now()-p,httpStatus:w.status,businessCode:m,errorType:f===\"protocol\"?\"invalid_response\":\"none\",extras:s===\"checkin_status\"?{checkin_enabled:w.data?.enable,checked_in:w.data?.checked_in}:void 0});let v=w.data;if(s===\"checkin_status\"&&w.data){const{credits:y,..._}=w.data;v=typeof y==\"number\"&&Number.isFinite(y)&&y>0?{..._,credits:y}:_}return{status:w.status,data:v}}catch(w){throw this.bb({apiName:s,endpointVariant:\"shared\",trigger:\"unknown\",result:\"fail\",failureStage:\"network\",durationMs:Date.now()-p,errorType:Xu(w)}),w}}async fetchCheckinCreditsStatus(e){const i=this.C,s=this.nb(),r=await this.mb(\"/trae/api/v2/ug/checkin_credits/status\",\"POST\",\"checkin_status\",void 0,e),n=r.data?.credits;return i===this.C&&s===this.nb()&&(this.n=s&&r.status===200&&typeof n==\"number\"&&Number.isFinite(n)&&n>0?{generation:i,day:s,credits:n}:void 0),r}nb(){return LF(this.H?this.H.serverTime+Date.now()-this.H.lastSyncTime:void 0)}async claimCheckinCredits(e,i){i&&this.q(i);const s=i?.generation??this.C,r=i?.userId??this.f?.userId,n=this.nb()??LF(D"
+    },
+    {
+      "name": "claim",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1992993,
+      "excerpt": "async claimCheckinCredits(e,i){i&&this.q(i);const s=i?.generation??this.C,r=i?.userId??this.f?.userId,n=this.nb()??LF(Date.now());if(this.j?.generation===s&&this.j.userId===r&&this.j.day===n)return this.j.promise;const o=this.n?.generation===s&&this.n.day===n?this.n.credits:void 0,a=(async()=>{const l=await this.mb(\"/trae/api/v2/ug/checkin_credits/claim\",\"POST\",\"checkin_claim\",void 0,i),d=S1e(l);if(d&&s===this.C&&r===this.f?.userId&&!ii(this.X)){try{this.b?.(ne.MAIN_TO_SANDBOX_SEND_CHECKIN_CREDITS_INVALIDATED)}catch(u){this.S.warn(\"[CheckinCredits] invalidation delivery failed\",u)}e&&n===this.nb()&&Promise.resolve().then(()=>{if(s===this.C&&r===this.f?.userId&&n===this.nb())return this.getCheckinLotteryController().participate(e.windowId,e.source,{...d,credits:o})}).catch(u=>this.S.warn(\"[CheckinLottery] attached draw failed\",u))}return{...l,beijingDayKey:n}})(),c={userId:r,generation:s,day:n,promise:a};this.j=c;try{return await a}finally{this.j===c&&(this.j=void 0)}}ob(e){e[\"x-device-id\"]=this.$.guaranteedDeviceId;const i=this.g?.commonParams,s=HF(i?.device_model);s&&(e[\"x-device-brand\"]=s),i?.os_name&&(e[\"x-device-type\"]=i.os_name),i?.os_version&&(e[\"x-os-version\"]=i.os_version),i?.app_version&&(e[\"x-app-version\"]=i.app_version)}async pb(e,i,s,r,n,o){const a"
+    },
+    {
+      "name": "headers",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1993975,
+      "excerpt": "ob(e){e[\"x-device-id\"]=this.$.guaranteedDeviceId;const i=this.g?.commonParams,s=HF(i?.device_model);s&&(e[\"x-device-brand\"]=s),i?.os_name&&(e[\"x-device-type\"]=i.os_name),i?.os_version&&(e[\"x-os-version\"]=i.os_version),i?.app_version&&(e[\"x-app-version\"]=i.app_version)}async pb(e,i,s,r,n,o){const a=n??await this.R.getAuthUserInfo();if(this.X.providerCode!==Jr.CN||Jo(this.X)||a?.account.scope!==gt.M"
+    },
+    {
+      "name": "base_headers",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1990431,
+      "excerpt": "ib(){const e={\"Content-Type\":\"application/json\"},i=this.W.getValue(\"ai_assistant.request.env\"),s=this.W.getValue(\"ai_assistant.request.ppe\");return i===\"ppe\"&&s?Object.assign(e,{\"x-tt-env\":s,\"x-use-ppe\":\"1\"}):i===\"boe\"&&Object.assign(e,{\"x-tt-env\":s,\"x-use-boe\":\"1\"}),e}jb(e){return{headers:this.mixAuthorization(this.ib(),e)}}async lb(e,i,s,r){const n=await this.Z.getApi(mn.ugApi,e),o=r?.timeout??3e4;return this.Y.fetchJson({url:n,method:\"POST\",data:i,timeout:o,retry:r?.retry,retryDelay:r?.retryDelay,...s},async()=>this.c.request({method:\"POST\","
+    },
+    {
+      "name": "device",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1295644,
+      "excerpt": "import{ahaDeviceService as eS}from\"electron/main\";var fy,L$,pce,my,fce=C({\"out-build/vs/platform/iCubeDeviceRegister/electron-main/iCubeDeviceRegisterMainService.js\"(){\"use strict\";Ue(),Zi(),Ne(),eo(),Aa(),NLe(),RLe(),fy=\"has_device_id_updated_to_aha\",L$=\"device_id\",pce=\"install_id\",my=class extends hce{constructor(e,i,s){super(),this.s=e,this.t=i,this.u=s,this.r=\"\",this.r?(this.j=this.r,this.m=this.r,this.n=this.r):(this.j=eS?.deviceId?.deviceId||om,this.m=eS?.deviceId?.deviceId||om,this.n=eS?.deviceId?.localDeviceId||om),this.s.info(`[ICDRS] (constructor) did: ${this.j}, ldid: ${this.n}, rdid: ${this.m}`),this.q=new uce,this.init()}async init(){const e=Date.now();this.q.sendLog(\"info\",\"[ICDRS] (init) start\"),await this.u.whenReady;const s=this.u.getBoolean(fy,-1)||this.t.getItem(fy,\"true\")===\"true\"?void 0:this.t.getItem(L$),r=Date.now(),n=eS.getDeviceId(s).then(({deviceId:a})=>{this.j=a,this.m=a,this.r&&(this.j=this.r,this.m=this.r,this.n=this.r),this.g.open(),this.s.info(`[ICDRS] (init) resolve rdid: ${a}`)});n.then(()=>{this.t.setItem(fy,\"true\"),this.u.store(fy,!0,-1,1),this.t.removeItem(L$),this.t.removeItem(pce);const a=Date.now();this.q.sendEvent(\"icube_device_register_init_from_sdk_attempt\",{durationNum:a-r},{duration:String(a-r),currentDeviceId:this.j,currentLocalDeviceId:this.n})}),await wa(n,O$,()=>{this.g.isOpen()||this.j&&this.j!==\"0\"||(this.j=this.n,this.s.warn(`[ICDRS] (init) ahaDeviceService timeout ${O$}ms`))}),this.f.open(),this.s.info(`[ICDRS] (init) initialization done, did: ${this.j}, ldid: ${this.n}, rdid: ${this.m}`);const o=Date.now();this.q.sendEvent(\"icube_device_register_init\",{durationNum:o-e},{duration:String(o-e),currentDeviceId:this.j,currentLocalDeviceId:this.n})}injectICubeEventReportService(e){this.q.initICubeEventReportService(e)}getAllIds(){return{deviceId:this.j,localDeviceId:this.n,remoteDeviceId:this.m}}},my=__decorate([__param(0,Ae),__param(1,Vi),__param(2,wo)],my)}});import*as am from\"os\";function F$(){const t={release:am.release(),hostname:am.hostname(),memory:am.totalmem(),cpu:am.cpus().map(u=>u.model)},e=am.totalmem(),i=am.freemem(),r=`${(e-i)/e*100}%`,n=am.cpus(),o=n.reduce((u,p)=>u+p.times.idle,0),a=n.reduce((u,p)=>u"
+    },
+    {
+      "name": "transport",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 2877141,
+      "excerpt": "async c(e){try{if(e.rawBody!==void 0&&(typeof e.rawBody!=\"string\"||e.data!==void 0||Buffer.byteLength(e.rawBody,\"utf8\")>1024*1024||e.method?.toUpperCase()!==\"POST\"))throw new TypeError(\"Invalid TTNet raw SDK payload\");e.rawBody===void 0&&this.a.info(\"ttnet fetch request\",e.url);const{timeout:i=3e4}=e,s=new AbortController,r=()=>s.abort();e.signal?.aborted?s.abort():e.signal?.addEventListener(\"abort\",r,{once:!0});const n=setTimeout(()=>s.abort(),i),o={...e.options,method:e.method,headers:{...e.headers,\"x-rust-request-timeout\":i,...this.getEnv(e.url)},signal:s.signal};[\"post\",\"put\",\"patch\"].includes(o.method?.toLocaleLowerCase())&&(o.body=e.rawBody??JSON.stringify(e.data||{}));try{const a=await YU.fetch(e.url,o);if(e.rawBody===void 0&&this.a.info(\"ttnet fetch response\",e.url,a.status,a.statusText),a.status===304)return{data:null,status:304,headers:{get:d=>a.headers.get(d)}};if(!a.ok&&!e.acceptErrorStatus)throw new Error(\"fetch error:\"+e.url+\":\"+a.status+\":\"+a.statusText);if(e.responseType===\"text\"){const d=await Q4e(a,2097152);return{data:new TextDecoder().decode(d),status:a.status,headers:{get:u=>a.headers.get(u)}}}const c=await a.text();let l=null;if(c)try{l=JSON.parse(c)}catch(d){if(a.ok)throw d}return{data:l,status:a.status,headers:{get:d=>a.headers.get(d)}}}finally{clearTimeout(n),e.signal?.removeEventListener(\"abort\",r)}}catch(i){throw this.a.error(\"ttnet fetch error\",e.url,i),new Error(i.message)}}dispose(){super.dispose()}},F3=__decorate([__param(0,Ae),__param(1,Ot)],F3)}}),QU,Irt=C({\"out-build/vs/workbench/contrib/icubeBiz/electron-browser/resourceDiagnosis.js\"(){\"use strict\";QU=t=>({ignore:\"icube.resourceReminder.suppress.global.until\",doNotRemind:\"icube.resourceReminder.doNotRemind.global.until\"})}});function xrt(t,e,i){const s=(r,n,o)=>r!==void 0?XE(r)?r:void 0:n!==void 0?XE(n)?n:void 0:o;return{logsBytes:s(i?.logsBytes,t?.logsBytes,e.logsBytes),ckgBytes:s(i?.ckgBytes,t?.ckgBytes,e.ckgBytes),snapshotsBytes:s(i?.snapshotsBytes,t?.snapshotsBytes,e.snapshotsBytes)}}function KE(t,e,i){return typeof t==\"number"
+    },
+    {
+      "name": "retry",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 2874532,
+      "excerpt": "async fetchWithHeaders(e){const i=(e.retry??0)+1,s=e.retryDelay??1e3;let r;for(let n=1;n<=i;n++)try{return await this.c(e)}catch(o){r=o,n<i&&(this.a.info(\"ttnet fetch retry\",e.url,`attempt ${n}/${i}`,o.message),await new Promise(a=>setTimeout(a,s)))}throw r}async fetchBytes(e,i){const s=[],r=await this.streamBytes(e,a=>{s.push(a)},i),n=new Uint8Array(r.total"
+    },
+    {
+      "name": "metadata",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1956928,
+      "excerpt": "app_version:this.a.appVersion,os_name:p?.osName,os_version:p?.osVersion,os_release:p?.osRelease,platform:\"electron\",device_model:p?.deviceModel,device_manufacturer:p?.deviceManufacturer,cpu:p?.cpuManufacturer,cpu_brand:p?.cpuBrand,cpu_speed:p?.cpuSpeed,memory:p?.totalMemory,is_ssh:e.isSshMode,ssh_remote_authority:e.sshRemoteAuthority,ssh_mode:e.sshMode,language:iq,app_language:"
+    },
+    {
+      "name": "endpoint_resolver",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 841520,
+      "excerpt": "async getApi(t,e){const i=await this.getBootConfig();return t===mn.iCubeApi?this.y(`${i?.iCubeApi||\"\"}${e}`):t===mn.ugApi?this.y(`${i?.ugApi||\"\"}${e}`):t===mn.iCubeAgentApi?this.y(`${i?.iCubeAgentApi||\"\"}${e}`):\"\"}async getAgentConfig(){return(await this.getBootConfig()).agent}async getCueConfig(){return(await this.getBootConfig()).cue}async getCKGConfig(){r"
+    }
+  ]
+}

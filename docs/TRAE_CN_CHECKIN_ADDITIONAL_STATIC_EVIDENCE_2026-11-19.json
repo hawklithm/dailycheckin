@@ -1,0 +1,129 @@
+{
+  "kind": "static_bundle_inspection_not_network_capture",
+  "app_version": "3.4.20",
+  "offset_unit": "zero-based Unicode character index after UTF-8 decoding",
+  "files": {
+    "main": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "sha256": "433e32bd7821ab4b05e46be1fc1b74043315884ba3ec58c45c99d94f58fd6816"
+    },
+    "workbench": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\vs\\workbench\\workbench.desktop.main.js",
+      "sha256": "ef45a1c374921209589a69ce36bcda89855f569a2ac15e04f92996d8c1101edc"
+    },
+    "product": {
+      "path": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\product.json",
+      "sha256": "c1cb3a485464a0dcf2fb5e0361d49504ab2d6a70a3522b8b531e7f9db3408ccf"
+    }
+  },
+  "prior_evidence_verified": true,
+  "sections": [
+    {
+      "name": "authorization",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1987981,
+      "excerpt": "mixAuthorization(e,i){return{...e,Authorization:`Cloud-IDE-JWT ${i}`}}strToTimestamp(e){if(e)try{ret"
+    },
+    {
+      "name": "system_information_import",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1879139,
+      "excerpt": "import{ahaDeviceService as UQe}from\"electron\";function jQe(t){if(!t)return{manufacturer:\"Unknown\",brand:\"\"};co"
+    },
+    {
+      "name": "system_information_service",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1880763,
+      "excerpt": "F4=class extends ae{get systemInformation(){return{deviceModel:this.a,deviceManufacturer:this.b,osName:this.c,osRelease:this.f,osKernel:this.g,osVersion:this.h,cpuManufacturer:this.j,cpuBrand:this.m,cpuModel:this.n,cpuSpeed:this.q,totalMemory:this.s,cpuCount:this.r}}constructor(e){super(),this.t=e;const i=UQe.deviceInfo;if(this.a=i.model??\"\",this.b=i.manufacturer??\"\",this.c=Ch===\"darwin\"?\"mac\":Ch===\"win32\"?\"windows\":Ch,this.g=L4.release(),Ce)this.f=i.release??\"\",this.h=`macOS ${this.f}`;else if(Te)this.f=L4.release(),this.h=L4.version();else if(Ft){const a=WQe();this.f=a.VERSION_ID||\"\",this.h=a.PRETTY_NAME||\"Linux\"}else this.f=i.release??\"\",this.h=\"\";const s=L4.cpus(),r=s[0]?.model??\"\",{manufacturer:n,brand:o}=jQe(r);this.j=n,this.m=o,this.n=r,this.q=s[0].speed/1e3,this.r=s.length,this.s=L4.totalmem(),this.t.debug(\"get system information\",this.systemInformation)}async getSystemInformation(){return this.systemInformation}},F4=__decorate([__param(0,Ae)],F4)}}),B4,Cme=C({\"out-build/vs/platform/soloMobilePermission/common/soloMobilePermissionService.js\"(){\"use strict\";_e(),B4=ye(\"ISoloMobilePermissionService\")}}),gF,Eme=C({\"out-build/vs/platform/soloMobilePermission/common/ipc.js\"(){\"use strict\""
+    },
+    {
+      "name": "main_metadata_initialization",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 2603360,
+      "excerpt": "async initialize(e,i){const[s,r,n,o]=await fZe([this.Ib.getSystemInformation(),this.Hb.resolveDeviceId(),this.Nb.getEntitlementInfo({withoutFetch:!0}),this.Pb.getBootConfig()]),a=await this.Qb.getStoreRegion(),c=this.ab.userInfo;await this.Z({deviceId:this.Hb.j,remoteDeviceId:this.Hb.m,localDeviceId:this.Hb.n,storeCountryCode:a?.countryCode,storeCountryCodeSrc:a?.countryCodeSrc,storeRegion:a.region,machineId:e||\"\",userInfo:c,icubeMainUid:i,systemInformation:s,entitlementInfo:n}),this.Y(this.b,o?.tea,this.a.quality),this.fb(c),Qw(()=>{this.db(o?.tea).then(()=>{this.Ub()})}),this.rb(o?.slardar),this.X(),this.D(le.any(this.Hb.onDidChangeDeviceId,this.Hb.onDidChangeRemoteDeviceId)(()=>{this.ub(this.Hb.j,this.Hb.m,this.Hb.n)})),this.D(this.Qb.onStoreRegionChange(l=>this.wb(l))),this.D(this.ab.onDidChangeUserInfo(async l=>{this.vb(l)})),this.D(this.ab.onDidChangeAppPrivacyMode(l=>this.zb(l))),this.D(this.Nb.onDidServerInfoChanged(l=>this.yb(l?.entitlementInfo)))}async Ub(){const e=this.Lb.getItem(G_);if(e)try{const i=JSON.parse(e),s=await this.getTeaClient();i.forEach(r=>{s?.collect(r.event,r.params||{})}),this.Lb.removeItem(G_)}catch{}}a"
+    },
+    {
+      "name": "common_params_mapping",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1956059,
+      "excerpt": "async Z(e,i){const s=await this.Ab(),{deviceId:r,remoteDeviceId:n,localDeviceId:o,machineId:a,userInfo:c,icubeMainUid:l,windowId:d,workspaceId:u,systemInformation:p,entitlementInfo:w,workspaceRootCount:f,workspaceStatus:m,storeCountryCode:v,storeCountryCodeSrc:y,storeRegion:_}=e,T=c?.userId||\"0\",k=m1e(c);this.commonParams={icube_uid:T,user_id:T,biz_user_id:T,user_is_login:!!c?.userId,user_unique_id:r,device_id:n,local_device_id:o,is_special_uuid:r===o,machine_id:a,arch:VA,system:Ch,scope:k,tenant_id:c?.account?.tenant_id,tenant_name:c?.account?.tenant_name,organization:c?.account?.organization,build_version:this.a.tronBuildVersion,vscode_version:this.a.version,tenant:c?.account?.scope,region:this.getRegion(c),aiRegion:sg(c),quality:this.a.quality,build_time:this.a.date,icube_main_uid:l,window_id:d,window_type:Yl(this.a.windowType,Xl(this.a)),workspace_id:u,app_version:this.a.appVersion,os_name:p?.osName,os_version:p?.osVersion,os_release:p?.osRelease,platform:\"electron\",device_model:p?.deviceModel,device_manufacturer:p?.deviceManufacturer,cpu:p?.cpuManufacturer,cpu_brand:p?.cpuBrand,cpu_speed:p?.cpuSpeed,memory:p?.totalMemory,is_ssh:e.isSshMode,ssh_remote_authority:e.sshRemoteAuthority,ssh_mode:e.sshMode,language:iq,app_language:fa,chat_mode:e.chatMode,identity:yl(w?.identity),identity_str:w?.identityStr,pro_period:yl(w?.proPeriod),has_package:yl(w?.hasPackage),is_freshman:yl(w?.isPayFreshman),is_dollar_usage_billing:yl(w?.isDollarUsageBilling),channel_name:this.a.channelName,process_type:this.W,privacy_mode:s,aha_version:this.a.ahaVersion||\"\",store_country_code:v,store_country_code_src:y,store_region:_,workspace_status:m,workspace_root_count:f,product_code:Xl(this.a),...i},j9&&(this.commonParams.solo_lite_app_slim_enabled=yl(!0)),this.H.fire(this.commonParams)}async updateCommonParams(e){await this.j.p,this.m&&await this.m.p,Object.keys(e).some(s=>this.commonParams[s]!==e[s])&&(this.commonParams={...this.commonParams,...e},this.eb(),this.sb(),this.G.fire({all:this.commonParams,changed:e}))}$(){return this.C?.engine===kr.Bytefinder?this.n:this.C?.engine===kr.Tea?t"
+    },
+    {
+      "name": "web_request_dispatch",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 943044,
+      "excerpt": "function bRe(t,e){_Re(e),yRe(t,e),vRe(e);const i=new Set,s=new Set;for(const{rule:r}of Ag)r.onBeforeSendHeaders&&r.urlPatterns.forEach(n=>i.add(n)),r.onHeadersReceived&&r.urlPatterns.forEach(n=>s.add(n));i.size>0&&t.webRequest.onBeforeSendHeaders({urls:[...i]},async(r,n)=>{let o={};for(const{rule:a,matchers:c}of Ag)if(a.onBeforeSendHeaders&&lse(r,a,c)){const l=await a.onBeforeSendHeaders(r);o={...o,...l}}n({cancel:!1,requestHeaders:Object.assign(r.requestHeaders,o)})}),s.size>0&&t.webRequest.onHeadersReceived({urls:[...s]},(r,n)=>{let o=r.responseHeaders??Object.create(null),a=!1,c;for(const{rule:l,matchers:d}of Ag)if(l.onHeadersReceived&&lse(r,l,d)){const u=l.onHeadersReceived(r);if(u){if(u.cancel){a=!0;break}u.responseHeaders&&(o={...o,...u.responseHeaders}),u.statusLine&&(c=u.statusLine)}}n({cancel:a,responseHeaders:o,statusLine:c})})}function dse(t){try{const e=new URL(t);return e.protocol!==\"https:\"&&e.protocol!==\"http:\"||!e.pathname.endsWith(\"/archive.zip\")?void 0:{sanitizedUrl:`${e.origin}${e.pathn"
+    },
+    {
+      "name": "web_request_marketplace_rule",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 945716,
+      "excerpt": "function SRe(t){const{productService:e}=t,i=[\"https://*.vsassets.io/*\"];if(e.extensionsGallery?.serviceUrl){const c=ue.parse(e.extensionsGallery.serviceUrl);i.push(`${c.scheme}://${c.authority}/*`)}e.bootConfig?.extensionGallery?.customExtensionsGalleryDomains&&Array.isArray(e.bootConfig?.extensionGallery?.customExtensionsGalleryDomains)&&i.push(...e.bootConfig?.extensionGallery?.customExtensionsGalleryDomains.map(c=>`https://${c.domain}/*`));const s=e.bootConfig?.ug;s&&Yf(s).forEach(l=>{const d=l.startsWith(\"https://\")?`${l}/*`:`https://${l}/*`;i.includes(d)||i.push(d)});let r;const n=()=>(r||(r=fRe(t.productService.version,t.productService,t.environmentMainService,t.configurationService,t.fileService,t.applicationStorageMainService,t.telemetryService)),r),o=c=>{let l=c.frame?.parent||null;for(;l;){if(l.url.includes(\"/_trae/devtools_wrapper.html\")){const[d,u]=l.url.split(\"?\");if(u){const p=u.split(\"&\"),w={};if(p.forEach(f=>{const[m,v]=f.split(\"=\");w[m]=v}),w.target)return{\"x-target\":w.target}}}l=l.parent}return{}},a=[\"/cloudide/api/v3/trae/GetUserInfo\",\"/trae/api/v3/oauth/ExchangeToken\",\"/cloudide/api/v3/trae/CheckLogin\"];Qf({name:\"marketplace-headers\",urlPatterns:i,shouldApply(c){try{const{pathname:l}=new URL(c.url);return!a.includes(l)}catch{return!0}},async onBeforeSendHeaders(c){return/127\\.0\\.0\\.1/.test(c.url)?o(c):await n()}})}function CRe(t){const{productService:e,mainICubeAuthManagementService:i}=t,s=c=>{const l=e.bootConfig?.account?.bypassHosts;if(l&&Array.isArray(l)&&l.some(p=>c.endsWith(p)))return!0;const d=i.cacheUserInfo?.account;if(d?.scope!==gt.SAAS)return!1;const u=d.saasBootConfig?.consoleHost;if(!u)return!1;try{const p=new"
+    },
+    {
+      "name": "marketplace_header_builder",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 939909,
+      "excerpt": "async function fRe(t,e,i,s,r,n,o){const a={\"X-Market-Client-Id\":`VSCode ${t}`,\"User-Agent\":`VSCode ${t} (${e.nameShort})`},c=s.getValue(\"ai_assistant.request.env\"),l=s.getValue(\"ai_assistant.request.ppe\");if(c&&l&&Object.assign(a,{[`x-use-${c}`]:\"1\",\"x-tt-env\":l}),ZP(e,i)&&H8(s)===3){const d=await hRe(i,r,n);a[\"X-Market-User-Id\"]=d,a[\"VSCode-SessionId\"]=o.machineId||d}return a}var mRe=C({\"out-build/vs/platform/externalServices/common/marketplace.js\"(){\"use strict\";pRe(),md()}}),EN,ose,ase,ka,b2=C({\"out-build/vs/platform/iCub"
+    },
+    {
+      "name": "web_request_auth_region_rule",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 948664,
+      "excerpt": "function kRe(t){const{productService:e,configurationService:i,mainICubeAuthManagementService:s,storeRegionService:r,dynamicConfigService:n,iCubeEventReportService:o,logService:a}=t,c=[...TN(e.bootConfig?.ug),...TN(e.bootConfig?.agent),...TN(e.bootConfig?.remote),...Yf(e.bootConfig?.consoleHost)],l=new mse(c,()=>{a.warn(\"[WebRequestInterceptor] Ignoring invalid traeHeaderFilter origin\")}),d=async()=>{const p=await s.getAuthUserInfo(),w=await r.getStoreRegion(),m={Authorization:`Cloud-IDE-JWT ${p?.token||\"\"}`,\"X-User-Region\":w.region||\"\"},v=i.getValue(\"ai_assistant.request.env\"),y=i.getValue(\"ai_assistant.request.ppe\");return v===\"ppe\"&&y&&(m[\"x-tt-env\"]=y,m[\"x-use-ppe\"]=\"1\"),v===\"boe\"&&y&&(m[\"x-use-boe\"]=\"1\",m[\"x-tt-env\"]=y),m},u=[\"/cloudide/api/v3/trae/GetUserInfo\",\"/trae/api/v3/oauth/ExchangeToken\",\"/cloudide/api/v3/trae/CheckLogin\"];Qf({name:\"solo-lite-websocket-headers\",urlPatterns:[...use],shouldApply(p){try{const w=new URL(p.url);if(w.hostname.startsWith(\"lf-cdn\")||w.hostname.includes(\"cdn.\")||u.some(f=>w.pathname===f))return!1;if(w.protocol===\"https:\"){const f=n.getConfigData()?.iCubeApp?.webRequestInterceptor?.traeHeaderFilter,m=l.evaluate(w.origin,f,w.hostname),v=wse.record({url:w,method:p.method??\"\",resourceType:p.resourceType??\"\",result:m});return v&&o.getSlardarClient().then(y=>{y?.sendEvent?.(v)}).catch(y=>{a.error(\"[WebRequestInterceptor] Failed to report trae header rule hit\",y)}),m.allowed}return!0}catch{return!0}},async onBeforeSendHeaders(){return await d()}})}function TRe(t){const{productService:e,configurationService:i}=t;if(e.quality===\"stable\")return;const s=[\"<all_urls>\"],r=[],n=e.bootConfig?.dynamicUI?.sandboxUrl?.trim();if(n)try{const a=new URL(n),c=`${a.protocol}//${a.hostname}/*`;r.push(c)}catch{}const o=r.map(cse);Qf({name:\"solo-lite-sandbox-ppe-headers\",urlPatterns:s,shouldApply(a){try{const{hostname:c}=new URL(a.url);return c.includes(\"traecontent\")||kN(a.url,o)}catch{return kN(a.url,o)}},async onBeforeSendHeaders(){const a={},c=i.getValue(\"ai_assistant.request.env\"),l=i.getValue(\"ai_as"
+    },
+    {
+      "name": "code_window_session_binding",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 965509,
+      "excerpt": "bRe(this.s.webContents.session,{productService:this.Ib,environmentMainService:this.H,configurationService:this.F,fileService:this.zb,applicationStorageMainService:this.Ab,telemetryService:this.Fb,logService:this.I,mainICubeAuthManagementService:this.Kb,storeRegionService:this.Pb,dynamicConfigService:this.Mb,iCubeEventReportService:this.Lb})}async Sb(e,i,s){switch(e){case 2:this.I.error(`CodeWindow: ren"
+    },
+    {
+      "name": "code_window_options",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 962630,
+      "excerpt": "const ge=I.invokeFunction(xf,this.gb,e.browserWindowOverrides,{preload:Qt.asFileUri(\"vs/base/parts/sandbox/electron-browser/preload.js\").fsPath,additionalArguments:[`--vscode-window-config=${this.ob.resource.toString()}`],v8CacheOptions:this.H.useCodeCache?\"bypassHeatCheck\":\"none\"});e.preferenceBackground&&(ge.backgroundColor=e.preferenceBackground),this.hb={native:ge.frame!==!1&&ge.titleBarStyle!==\"hidden\"&&ge.title"
+    },
+    {
+      "name": "code_window_preferences",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 376685,
+      "excerpt": "function xf(t,e,i,s){const r=t.get(Vh),n=t.get(ut),o=t.get(Ot),a=t.get(Ci),c=o.getValue(\"window\"),l={backgroundColor:r.getBackgroundColor(),minWidth:i?.compact?e.width||fc.WIDTH:e.minWidth||fc.WIDTH,minHeight:i?.compact?e.height||fc.HEIGHT:i?.minWindowHeight??fc.HEIGHT,title:n.displayName,show:!i?.initiallyHidden&&e.mode!==0&&e.mode!==3,x:e.x,y:e.y,width:e.width,height:e.height,webPreferences:{...s,enableWebSQL:!1,spellcheck:!1,zoomFactor:Vke(e.zoomLevel??c?.zoomLevel),autoplayPolicy:\"no-user-gesture-required\",enableBlinkFeatures:\"HighlightAPI\",sandbox:!0,enableDeprecatedPaste:!0,webviewTag:!0},experimentalDarkMode:!0};if(Te){let p=c?.border||\"default\";p===\"system\"&&(p=\"default\"),p!==\"default\"&&(p===\"off\"?l.accentColor=!1:typeof p==\"string\"&&(l.accentColor=p))}if(Ft?l.icon=Q(a.appRoot,\"resources/linux/code.pn"
+    },
+    {
+      "name": "webview_partition",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1287804,
+      "excerpt": "rm=\"persist:trae-webview\",function(t){t."
+    },
+    {
+      "name": "native_login_device_id",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1404104,
+      "excerpt": "async getDeviceId(){return this.f.resolveDeviceId()}get h(){return thi"
+    },
+    {
+      "name": "native_claim_validator",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1966471,
+      "excerpt": "function k0(t){const e=xd(t.data);if(e&&Object.prototype.hasOwnProperty.call(e,\"code\")){if(typeof e.code!=\"number\"||!Number.isFinite(e.code))return{kind:\"protocol\"};if(e.code!==0){const i=e.code===9090?\"unavailable\":e.code===9102?\"not_signed\":e.code===1002?\"auth\":e.code===4001?\"parameters\":\"unknown\";return{kind:\"business\",code:e.code,reason:i}}}return t.status<200||t.status>=300||!Number.isInteger(t.status)?{kind:\"http\",status:t.status}:e?void 0:{kind:\"protocol\"}}function v1e(t){return typeof t==\"number\"&&Number.isFinite(t)&&t>0}function y1e(t){cons"
+    },
+    {
+      "name": "native_claim_accepted",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 1968633,
+      "excerpt": "function S1e(t){if(!(t.status!==200||k0({...t,data:t.data??{}})))return{succeeded:!0}}function LF(t){if(t===void 0||!Number.isFini"
+    },
+    {
+      "name": "ttnet_fetch",
+      "file": "D:\\Users\\marcus\\AppData\\Local\\Programs\\Trae CN\\resources\\app\\out\\main.js",
+      "character_offset": 2877141,
+      "excerpt": "async c(e){try{if(e.rawBody!==void 0&&(typeof e.rawBody!=\"string\"||e.data!==void 0||Buffer.byteLength(e.rawBody,\"utf8\")>1024*1024||e.method?.toUpperCase()!==\"POST\"))throw new TypeError(\"Invalid TTNet raw SDK payload\");e.rawBody===void 0&&this.a.info(\"ttnet fetch request\",e.url);const{timeout:i=3e4}=e,s=new AbortController,r=()=>s.abort();e.signal?.aborted?s.abort():e.signal?.addEventListener(\"abort\",r,{once:!0});const n=setTimeout(()=>s.abort(),i),o={...e.options,method:e.method,headers:{...e.headers,\"x-rust-request-timeout\":i,...this.getEnv(e.url)},signal:s.signal};[\"post\",\"put\",\"patch\"].includes(o.method?.toLocaleLowerCase())&&(o.body=e.rawBody??JSON.stringify(e.data||{}));try{const a=await YU.fetch(e.url,o);if(e.rawBody===void 0&&this.a.info(\"ttnet fetch response\",e.url,a.status,a.statusText),a.status===304)return{data:null,status:304,headers:{get:d=>a.headers.get(d)}};if(!a.ok&&!e.acceptErrorStatus)throw new Error(\"fetch error:\"+e.url+\":\"+a.status+\":\"+a.statusText);if(e.responseType===\"text\"){const d=await Q4e(a,2097152);return{data:new TextDecoder().decode(d),status:a.status,headers:{get:u=>a.headers.get(u)}}}const c=await a.text();let l=null;if(c)try{l=JSON.parse(c)}catch(d){if(a.ok)throw d}return{data:l,status:a.status,headers:{get:d=>a.headers.get(d)}}}finally{clearTimeout(n),e.signal?.removeEventListener(\"abort\",r)}}catch(i){throw this.a.error(\"ttnet fetch error\",e.url,i),new Error(i.message)}}dispose(){super.dispose()}},F3=__decorate([__param(0,Ae),__param(1,Ot)],F3)}}),QU,Irt=C({\"out-build/vs/workbench/contrib/icubeBiz/electron-browser/resourceDiagnosis.js\"(){\"us"
+    }
+  ],
+  "external_api_references": [
+    "https://www.electronjs.org/docs/latest/api/net#netfetchinput-init",
+    "https://www.electronjs.org/docs/latest/api/web-request#webrequestonbeforesendheadersfilter-listener"
+  ],
+  "scope": "Public installed bundle only; no account files, requests, hooks, or runtime changes."
+}

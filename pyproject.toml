@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "daily-checkin"
+version = "0.1.2.dev1"
+description = "Account-aware activity check-in library for Trae CN"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100,<1",
+    "httpx>=0.25,<1",
+    "buddy-agent-auth[trae]>=0.1.1,<0.2",
+]
+
+[project.optional-dependencies]
+workbuddy = ["buddy-agent-auth>=0.1.1,<0.2"]
+
+[project.scripts]
+daily-checkin = "daily_checkin.checkin:main"
+
+[tool.setuptools.packages.find]
+include = ["daily_checkin"]
+
+[dependency-groups]
+dev = ["pytest>=7.4"]
+
+[tool.uv]
+find-links = ["dist"]
+
+[tool.uv.sources]
+buddy-agent-auth = { path = "dist/buddy_agent_auth-0.1.1-py3-none-any.whl" }

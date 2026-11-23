@@ -1,0 +1,161 @@
+{
+  "path": "%LOCALAPPDATA%\\Programs\\Trae CN\\resources\\app\\modules\\ai-agent\\harness.dll",
+  "size": 299458448,
+  "sha256": "89663A4D602A661641454D930A6C21762B2424559544BCBAEBD8696FCFF46BE1",
+  "imagebase": "0x180000000",
+  "sections": [
+    {
+      "name": ".text",
+      "rva": "0x1000",
+      "raw_offset": "0x400",
+      "raw_size": "0xd13aa00"
+    },
+    {
+      "name": ".rdata",
+      "rva": "0xd13c000",
+      "raw_offset": "0xd13ae00",
+      "raw_size": "0x4204000"
+    },
+    {
+      "name": ".data",
+      "rva": "0x11340000",
+      "raw_offset": "0x1133ee00",
+      "raw_size": "0x5d400"
+    },
+    {
+      "name": ".pdata",
+      "rva": "0x113cc000",
+      "raw_offset": "0x1139c200",
+      "raw_size": "0x93f400"
+    },
+    {
+      "name": ".reloc",
+      "rva": "0x11d0c000",
+      "raw_offset": "0x11cdb600",
+      "raw_size": "0xb7a00"
+    }
+  ],
+  "targets": [
+    {
+      "literal": "/api/agent/v3/llm_utils_chat",
+      "literal_utf8_length": 28,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xec8aad9",
+          "rva": "0xec8bcd9",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": [
+        {
+          "instruction_rva": "0x90bb1a4",
+          "file_offset": "0x90ba5a4",
+          "target_rva": "0xec8bcd9",
+          "bytes": "48 8d 05 2e 0b bd 05",
+          "asm": "lea rax, [rip + 0x5bd0b2e]",
+          "containing_function": {
+            "begin_rva": "0x90bb120",
+            "end_rva": "0x90bb20b",
+            "unwind_rva": "0x10af1650"
+          },
+          "function_calls": {
+            "range_bytes": 235,
+            "calls": [
+              {
+                "call_rva": "0x90bb147",
+                "target_rva": "0xaf77ab0",
+                "target_function": {
+                  "begin_rva": "0xaf77ab0",
+                  "end_rva": "0xaf77bff",
+                  "unwind_rva": "0x10fb49d4"
+                }
+              },
+              {
+                "call_rva": "0x90bb156",
+                "target_rva": "0xc677a60",
+                "target_function": {
+                  "begin_rva": "0xc677a60",
+                  "end_rva": "0xc677ad6",
+                  "unwind_rva": "0x11330600"
+                }
+              },
+              {
+                "call_rva": "0x90bb163",
+                "target_rva": "0x90afc10",
+                "target_function": {
+                  "begin_rva": "0x90afc10",
+                  "end_rva": "0x90afe4b",
+                  "unwind_rva": "0x10aef19c"
+                }
+              },
+              {
+                "call_rva": "0x90bb1cc",
+                "target_rva": "0x90d48d0",
+                "target_function": {
+                  "begin_rva": "0x90d48d0",
+                  "end_rva": "0x90d4b3f",
+                  "unwind_rva": "0x10af5e1c"
+                }
+              },
+              {
+                "call_rva": "0x90bb1d9",
+                "target_rva": "0xaf73b00",
+                "target_function": {
+                  "begin_rva": "0xaf73b00",
+                  "end_rva": "0xaf73c2a",
+                  "unwind_rva": "0x10fb3c64"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "literal": "api/agent/v3/create_agent_task",
+      "literal_utf8_length": 30,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xefb13e3",
+          "rva": "0xefb25e3",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": []
+    },
+    {
+      "literal": "api/agent/v3/workflow/start",
+      "literal_utf8_length": 27,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xefb14ef",
+          "rva": "0xefb26ef",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": []
+    },
+    {
+      "literal": "api/ide/v2/llm_raw_chat",
+      "literal_utf8_length": 23,
+      "literal_occurrences": [
+        {
+          "file_offset": "0xefb1828",
+          "rva": "0xefb2a28",
+          "section": ".rdata"
+        }
+      ],
+      "exact_fat_string_candidates": [],
+      "rip_relative_code_refs": []
+    }
+  ],
+  "limits": [
+    "Only the explicitly supplied route literals and exact pointer+length pairs are searched.",
+    "Code xrefs are limited to Capstone-validated RIP-relative LEA/MOV instructions.",
+    "No code is executed and no function is fully disassembled outside xref-containing ranges."
+  ],
+  "explicit_candidate_rva_code_refs": []
+}

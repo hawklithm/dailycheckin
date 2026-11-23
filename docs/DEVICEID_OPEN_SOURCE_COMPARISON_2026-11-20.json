@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-20",
+  "package": "@vscode/deviceid",
+  "installed_version": "0.1.1",
+  "license": "MIT",
+  "published_archive": "https://registry.npmjs.org/@vscode/deviceid/-/deviceid-0.1.1.tgz",
+  "archive_sha1_verified": "750e2930a3a8fbf3fd610096a8b915dfdb493c89",
+  "archive_sha256": "0f62590c8374892914f1fe71028d6a6cf7097cf8db4f1c46edf7d21c3d7b3c05",
+  "comparison": [
+    {
+      "path": "dist/devdeviceid.js",
+      "installed_sha256": "2e78dcf514de31d6abcfb69154a5414fcdf6c362044c3af1ff2e8e89dce970cd",
+      "published_sha256": "0d30d86857783615a35a42e14f3770d4fc956769c9dd0911e054ad390805df72",
+      "byte_equal": false,
+      "without_sourcemap_equal": true
+    },
+    {
+      "path": "dist/storage.js",
+      "installed_sha256": "4c32e0e90cb5dce2af3e2ebd0daea210119576ee7b00e073beceeb23eddfd091",
+      "published_sha256": "17aa52331245954402de9a673e963c5ba7f19a337adfe46ef515373f7e74181f",
+      "byte_equal": false,
+      "without_sourcemap_equal": true
+    },
+    {
+      "path": "build/Release/windows.node",
+      "installed_sha256": "a6d6a5773891f333b0bda154c607dce8fcf9380fa5bb4de3c14283b82ca0e247",
+      "published_sha256": null,
+      "byte_equal": false,
+      "without_sourcemap_equal": null
+    },
+    {
+      "path": "LICENSE.txt",
+      "installed_sha256": "2fade85119c086eff03b6cc04d1b0975152c4920cb27122ca3f27473b3fdcefa",
+      "published_sha256": "2fade85119c086eff03b6cc04d1b0975152c4920cb27122ca3f27473b3fdcefa",
+      "byte_equal": true,
+      "without_sourcemap_equal": null
+    }
+  ],
+  "normalization": "Remove //# sourceMappingURL line suffix, normalize CRLF to LF, strip outer whitespace; no code rewriting.",
+  "public_source_review": {
+    "repository": "https://github.com/microsoft/vscode-deviceid",
+    "reviewed_commit": "bf3dad415c89d574e5ebb0f194ce54c0d17913cf",
+    "note": "Current source is supplementary; installed JS was compared against the published 0.1.1 archive, not against latest main."
+  },
+  "native": {
+    "app_version": "3.4.20",
+    "electron_dependency": "npm:@aha-kit/electron@39.2.7-release.1.61.0",
+    "main_js_sha256": "433e32bd7821ab4b05e46be1fc1b74043315884ba3ec58c45c99d94f58fd6816",
+    "exe_sha256": "eac5743ab3eafa528ae766a11a814cd0d8ea1c54cb948c66027e71479fe00ede",
+    "static_evidence": "AHA_DEVICE_CACHE_STATIC_EVIDENCE_2026-11-20.json",
+    "getter_rva": "0x0284a040",
+    "registration_rva": "0x0284a240",
+    "registration_response_rva": "0x0284c490",
+    "cache_decode_rva": "0x0284c9e0"
+  }
+}
