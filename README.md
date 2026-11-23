@@ -4,7 +4,7 @@ DailyCheckin 是一个专注活动签到的 Python 库，目前支持 Trae CN �
 
 ## 使用 uv 开发和构建
 
-当前源码开发版为 `0.1.2.dev1`，依赖本地开发中的 `buddy-agent-auth 0.1.1`；首次从源码准备环境时，先将认证包构建到本项目 `dist`：
+当前源码版本为 `0.1.2`，依赖本地开发中的 `buddy-agent-auth 0.1.1`；首次从源码准备环境时，先将认证包构建到本项目 `dist`：
 
 ```powershell
 # 在 DailyCheckin 项目目录执行；需要相邻的 WorkBuddy2API 源码
@@ -20,7 +20,7 @@ uv run --extra workbuddy pytest
 uv build --out-dir dist
 ```
 
-生成的 `dist/daily_checkin-0.1.2.dev1-py3-none-any.whl` 可供 WorkBuddy2API 本地依赖；`dist/buddy_agent_auth-0.1.1-py3-none-any.whl` 用于当前开发环境解析 WorkBuddy 可选依赖。`dist` 中的包文件不提交到 Git，因此新检出仓库需要先构建认证 wheel，发布后再改为从包仓库解析。需要更新依赖时请增加 dev 版本号并重新构建。
+生成的 `dist/daily_checkin-0.1.2-py3-none-any.whl` 可供 WorkBuddy2API 本地依赖；`dist/buddy_agent_auth-0.1.1-py3-none-any.whl` 用于当前开发环境解析 WorkBuddy 可选依赖。`dist` 中的包文件不提交到 Git，因此新检出仓库需要先构建认证 wheel，发布后再改为从包仓库解析。更新版本后请重新构建对应的 wheel。
 
 ## 签到快速开始
 
