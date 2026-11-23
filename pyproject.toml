@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "daily-checkin"
+name = "buddy-agent-checkin"
 version = "0.1.2"
 description = "Account-aware activity check-in library for Trae CN"
 readme = "README.md"
