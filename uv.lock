@@ -275,7 +275,7 @@ wheels = [
 
 [[package]]
 name = "daily-checkin"
-version = "0.1.2.dev1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "buddy-agent-auth", extra = ["trae"] },
