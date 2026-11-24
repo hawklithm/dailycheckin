@@ -95,6 +95,120 @@ def test_midnight_schedules_delayed_followup(tmp_path):
     asyncio.run(scenario())
 
 
+def test_midnight_retries_until_status_succeeds_then_delays_from_success(tmp_path):
+    now = [datetime(2026, 11, 22, tzinfo=timezone(timedelta(hours=8)))]
+    sleeps, calls, logs = [], [], []
+    pending = asyncio.Event()
+    def handler(request):
+        calls.append(request.url.path)
+        if len(calls) <= 2:
+            return httpx.Response(429)
+        return httpx.Response(200, json={'enable': True, 'checked_in': False})
+    async def sleep(seconds):
+        sleeps.append(seconds)
+        if len(sleeps) <= 2:
+            now[0] += timedelta(seconds=seconds)
+        else:
+            pending.set()
+            await asyncio.Event().wait()
+    async def scenario():
+        service = make_service(tmp_path, handler, clock=lambda: now[0], sleep=sleep,
+                               retry_delay=lambda: 150, random_delay=lambda: 90)
+        service.configure_logging(lambda event, **fields: logs.append((event, fields)))
+        midnight = now[0]
+        await service._prepare_midnight('user1', '2026-11-22', midnight)
+        await asyncio.wait_for(pending.wait(), 2)
+        assert sleeps == [150, 150, 90]
+        assert calls == [STATUS_PATH] * 3
+        assert service.snapshot('user1')['next_checkin_at'] == midnight.timestamp() + 390
+        assert sum(event == 'trae_checkin_retry_scheduled' for event, _ in logs) == 2
+        await service.close()
+    asyncio.run(scenario())
+
+
+def test_midnight_retry_stops_when_disabled(tmp_path):
+    now = datetime(2026, 11, 22, tzinfo=timezone(timedelta(hours=8)))
+    calls = []
+    def handler(request):
+        calls.append(request.url.path)
+        return httpx.Response(429)
+    async def scenario():
+        service = make_service(tmp_path, handler, clock=lambda: now, retry_delay=lambda: 120)
+        async def sleep(seconds):
+            assert seconds == 120
+            service.manager.enabled = False
+        service._sleep = sleep
+        await service._prepare_midnight('user1', '2026-11-22', now)
+        assert calls == [STATUS_PATH]
+        assert not service._random_tasks
+        await service.close()
+    asyncio.run(scenario())
+
+
+def test_midnight_duplicate_dispatch_only_runs_once(tmp_path, monkeypatch):
+    now = datetime(2026, 11, 22, tzinfo=timezone(timedelta(hours=8)))
+    async def scenario():
+        service = make_service(tmp_path, lambda request: None, clock=lambda: now)
+        calls = []
+        async def prepare(*args):
+            calls.append(args)
+        monkeypatch.setattr(service, '_prepare_midnight', prepare)
+        await service._run_midnight(now.date())
+        await service._run_midnight(now.date())
+        await asyncio.gather(*list(service._tasks))
+        assert len(calls) == 1
+        await service.close()
+    asyncio.run(scenario())
+
+
+def test_midnight_retry_expires_at_next_day(tmp_path):
+    now = [datetime(2026, 11, 22, 23, 59, tzinfo=timezone(timedelta(hours=8)))]
+    calls = []
+    def handler(request):
+        calls.append(request.url.path)
+        return httpx.Response(429)
+    async def sleep(seconds):
+        now[0] += timedelta(seconds=seconds)
+    async def scenario():
+        service = make_service(tmp_path, handler, clock=lambda: now[0], sleep=sleep,
+                               retry_delay=lambda: 100)
+        await service._prepare_midnight('user1', '2026-11-22', now[0])
+        assert calls == [STATUS_PATH]
+        assert not service._random_tasks
+        await service.close()
+    asyncio.run(scenario())
+
+
+def test_midnight_retries_and_claims_after_success_delay(tmp_path):
+    now = [datetime(2026, 11, 22, tzinfo=timezone(timedelta(hours=8)))]
+    events, done = [], asyncio.Event()
+    checked = [False]
+    def handler(request):
+        events.append((request.url.path, now[0]))
+        if len(events) == 1:
+            return httpx.Response(429)
+        if request.url.path == CLAIM_PATH:
+            checked[0] = True
+            return httpx.Response(200, json={'code': 0})
+        if checked[0]:
+            done.set()
+        return httpx.Response(200, json={'enable': True, 'checked_in': checked[0]})
+    async def sleep(seconds):
+        now[0] += timedelta(seconds=seconds)
+    async def scenario():
+        service = make_service(tmp_path, handler, clock=lambda: now[0], sleep=sleep,
+                               retry_delay=lambda: 100, random_delay=lambda: 60)
+        start = now[0]
+        await service._prepare_midnight('user1', '2026-11-22', start)
+        await asyncio.wait_for(done.wait(), 3)
+        await asyncio.gather(*list(service._tasks))
+        claim_times = [when for path, when in events if path == CLAIM_PATH]
+        assert claim_times == [start + timedelta(seconds=160)]
+        assert service.snapshot('user1')['status'] == 'checked'
+        await service.close()
+    asyncio.run(scenario())
+
+
 def test_claim_gate_prevents_request(tmp_path, monkeypatch):
     paths = []
     def handler(request):

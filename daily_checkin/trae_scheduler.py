@@ -4,10 +4,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 from dataclasses import replace
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 from pathlib import Path
+import random
 import sqlite3
 from typing import Callable
 
@@ -49,10 +51,13 @@ class TraeCheckinService(AccountCheckinService):
     """
 
     def __init__(self, account_id: str, load_account: Callable[[], trae.Account],
-                 directory: Path, *, client_factory=None, **kwargs):
+                 directory: Path, *, client_factory=None, retry_delay=None, **kwargs):
         if not isinstance(account_id, str) or not account_id:
             raise ValueError('Trae account user ID is required for scheduling')
+        kwargs.setdefault('random_delay', lambda: random.uniform(60.0, 600.0))
         super().__init__(_Manager(account_id, Path(directory)), **kwargs)
+        self._retry_delay = retry_delay or (lambda: random.uniform(100.0, 200.0))
+        self._last_midnight_date = None
         self._load_account = load_account
         self._client_factory = client_factory or (lambda: httpx.Client(timeout=30, trust_env=False))
         self._diagnostic_account_id = 'trae_' + hashlib.sha256(account_id.encode()).hexdigest()[:16]
@@ -81,6 +86,58 @@ class TraeCheckinService(AccountCheckinService):
             return trae.checkin(account, client, status_only=status_only, before_claim=before_claim,
                 diagnostic=lambda **fields: self._log('trae_checkin_failure', account_id=account_id,
                     date=self._today(), reason=reason, **fields))
+
+    @staticmethod
+    def _bounded_delay(source, minimum, maximum):
+        try:
+            value = float(source())
+        except (TypeError, ValueError, OverflowError):
+            value = minimum
+        return min(maximum, max(minimum, value)) if math.isfinite(value) else minimum
+
+    async def _run_midnight(self, target_date):
+        # The shared timer can wake just before midnight and invoke this twice.
+        # One service owns one Trae account, so only schedule each date once.
+        while self._now().date() < target_date and not self._stop_event.is_set():
+            midnight = datetime.combine(target_date, datetime.min.time(), tzinfo=self._now().tzinfo)
+            await self._sleep(max(0.01, (midnight - self._now()).total_seconds()))
+        if self._stop_event.is_set() or self._today() != target_date.isoformat():
+            return
+        if self._last_midnight_date == target_date:
+            return
+        self._last_midnight_date = target_date
+        await super()._run_midnight(target_date)
+
+    async def _prepare_midnight(self, account_id: str, target_date: str, midnight: datetime):
+        while self._before_post_allowed(account_id, target_date, True):
+            result = await self.check_status(account_id, reason='midnight')
+            status = result['status']
+            if not self._before_post_allowed(account_id, target_date, True):
+                break
+            if status == 'unchecked':
+                delay = self._bounded_delay(self._random_delay, 60.0, 600.0)
+                # Delay is relative to the successful query, not midnight.
+                due = self._now() + timedelta(seconds=delay)
+                self._state(account_id)['next_checkin_at'] = due.timestamp()
+                self._log('account_checkin_scheduled', account_id=account_id, date=target_date,
+                          reason='midnight', status='unchecked', next_checkin_at=due.timestamp())
+                key = (account_id, target_date)
+                old = self._random_tasks.get(key)
+                if old is not None and old is not asyncio.current_task() and not old.done():
+                    old.cancel()
+                self._random_tasks[key] = self._spawn(
+                    self._random_followup(account_id, target_date, due), key=key)
+                return
+            if status not in {'error', 'unknown'}:
+                self._log('account_checkin_midnight_skipped', account_id=account_id,
+                          date=target_date, reason='midnight', status=status)
+                return
+            delay = self._bounded_delay(self._retry_delay, 100.0, 200.0)
+            self._log('trae_checkin_retry_scheduled', account_id=account_id, date=target_date,
+                      reason='midnight', status=status, next_checkin_at=self._epoch() + delay)
+            await self._sleep(delay)
+        self._log('account_checkin_midnight_skipped', account_id=account_id,
+                  date=target_date, reason='midnight', status='disabled_or_expired')
 
     async def _check_status_locked(self, account_id: str, reason: str):
         state = self._state(account_id)

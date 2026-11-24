@@ -97,7 +97,7 @@ python -m daily_checkin workbuddy travel schedule
 uv run daily-checkin trae schedule --native --device-id-source get-device-id
 ```
 
-独立登录凭据可使用 `uv run daily-checkin trae schedule --creds <凭据文件>`。启动时检查当天状态；跨日后先查状态，再在北京时间零点后的 0～10 分钟内随机安排签到。进程需要持续运行；按 `Ctrl+C` 停止。调度器固定启动时的账号，每次操作重新读取登录态；账号切换后需重启。设备已签到或签到结果未知时不会重复领取。
+独立登录凭据可使用 `uv run daily-checkin trae schedule --creds <凭据文件>`。启动时检查当天状态；跨日后查询状态，查询失败时每次随机等待 100～200 秒后重试，直到查询成功、自动签到关闭或日期改变。确认未签到后，从查询成功时起随机等待 1～10 分钟，再检查并执行签到。进程需要持续运行；按 `Ctrl+C` 停止。调度器固定启动时的账号，每次操作重新读取登录态；账号切换后需重启。设备已签到或签到结果未知时不会重复领取。
 
 如果希望随 WorkBuddy2API 一起启动，在启动它之前设置 `$env:DAILYCHECKIN_TRAE_NATIVE = "1"`；或者仅设置 `$env:DAILYCHECKIN_TRAE_CREDS = "凭据文件路径"` 使用独立凭据。可选的 `DAILYCHECKIN_TRAE_DEVICE_ID_SOURCE` 支持 `get-device-id`（默认）或 `existing`（仅本机登录态）。Trae 的开关与 WorkBuddy 自动签到开关独立。
 
