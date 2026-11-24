@@ -69,6 +69,22 @@ python -m daily_checkin workbuddy schedule
 
 PyPI 已发布 `buddy-agent-auth 0.1.0.dev1` 和 `buddy-agent-checkin 0.1.1.dev2`；本源码中的多账号开发功能需要尚未发布的认证包 0.1.1，独立安装示例需要本地认证包源码或其 wheel。真实 WorkBuddy 登录和签到尚未完成本次集成的线上验收。 WorkBuddy2API 的 `/v1/checkin` 和 `/v1/checkin-status` 兼容端点也由 DailyCheckin 提供，保持原有上游透传语义；其中 `/v1/checkin` 直接提交，不经过账号签到服务的状态预检或跨进程去重。管理界面和独立 `execute` 命令使用账号签到服务。
 
+### WorkBuddy 国内版猫猫旅行
+
+猫猫旅行支持查询状态、派出和到达后领取奖励；使用已关联的 WorkBuddy 国内账号，不会切换当前代理账号。Global 和自定义服务地址不会发送旅行请求。WorkBuddy2API 管理页提供“WorkBuddy 猫猫旅行”开关及单账号操作，自动旅行默认关闭。
+
+独立使用时，可先用 `workbuddy list` 找到账号 ID，再执行：
+
+```powershell
+python -m daily_checkin workbuddy travel status --account <账号ID>
+python -m daily_checkin workbuddy travel execute --account <账号ID>
+python -m daily_checkin workbuddy travel schedule
+```
+
+`status` 只查询；`execute` 根据上游状态派出、等待或领取。`schedule` 会持久开启自动旅行并持续运行，启动时立即检查，以后每 15 分钟检查领奖、每 30 分钟检查派出。`travel enable` / `travel disable` 也可持久设置开关；WorkBuddy2API 会在启动后读取该设置。进程需持续运行才能按时执行。
+
+同一账号的派出和领取通过账号目录内的 SQLite 记录进行跨进程去重。请求结果未知时会保守阻止重复提交；上游未提供旅行记录 ID 时尤其无法安全区分跨日的不同领取。真实服务行为仍需使用授权账号验证。
+
 ### Trae CN 多账号管理与签到
 
 `daily_checkin.trae_accounts.TraeAccounts` 组合认证包的 Trae 账号管理与本项目的多账号签到调度。它沿用宿主账号目录下的 `trae-cn` 账号目录及 `settings.json` 自动签到设置；各账号的登录凭据与设备身份由认证包管理。宿主负责页面和生命周期接线，调用 `start()`、`snapshot()`、`checkin()`、`set_auto()` 和 `close()`。
